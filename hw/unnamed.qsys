@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system name="$${FILENAME}">
+ <component
+   name="$${FILENAME}"
+   displayName="$${FILENAME}"
+   version="1.0"
+   description=""
+   tags="INTERNAL_COMPONENT=true"
+   categories="" />
+ <parameter name="bonusData"><![CDATA[bonusData 
+{
+   element adc_0
+   {
+      datum _sortIndex
+      {
+         value = "0";
+         type = "int";
+      }
+   }
+}
+]]></parameter>
+ <parameter name="clockCrossingAdapter" value="HANDSHAKE" />
+ <parameter name="device" value="5CSEMA4U23C6" />
+ <parameter name="deviceFamily" value="Cyclone V" />
+ <parameter name="deviceSpeedGrade" value="6" />
+ <parameter name="fabricMode" value="QSYS" />
+ <parameter name="generateLegacySim" value="false" />
+ <parameter name="generationId" value="0" />
+ <parameter name="globalResetBus" value="false" />
+ <parameter name="hdlLanguage" value="VERILOG" />
+ <parameter name="hideFromIPCatalog" value="true" />
+ <parameter name="lockedInterfaceDefinition" value="" />
+ <parameter name="maxAdditionalLatency" value="1" />
+ <parameter name="projectName" value="" />
+ <parameter name="sopcBorderPoints" value="false" />
+ <parameter name="systemHash" value="0" />
+ <parameter name="testBenchDutName" value="" />
+ <parameter name="timeStamp" value="0" />
+ <parameter name="useTestBenchNamingPattern" value="false" />
+ <instanceScript></instanceScript>
+ <interface
+   name="avalon_streaming_source"
+   internal="adc_0.avalon_streaming_source"
+   type="avalon_streaming"
+   dir="start">
+  <port name="streaming_source_data" internal="streaming_source_data" />
+  <port name="streaming_source_valid" internal="streaming_source_valid" />
+ </interface>
+ <interface name="clock_sink" internal="adc_0.clock_sink" type="clock" dir="end">
+  <port name="slave_clk" internal="slave_clk" />
+ </interface>
+ <interface
+   name="clock_sink_adc"
+   internal="adc_0.clock_sink_adc"
+   type="clock"
+   dir="end">
+  <port name="adc_clk" internal="adc_clk" />
+ </interface>
+ <interface
+   name="conduit_end"
+   internal="adc_0.conduit_end"
+   type="conduit"
+   dir="end">
+  <port name="CONVST" internal="CONVST" />
+  <port name="SCK" internal="SCK" />
+  <port name="SDI" internal="SDI" />
+  <port name="SDO" internal="SDO" />
+ </interface>
+ <interface name="reset_sink" internal="adc_0.reset_sink" type="reset" dir="end">
+  <port name="slave_reset" internal="slave_reset" />
+ </interface>
+ <interface name="slave" internal="adc_0.slave" type="avalon" dir="end">
+  <port name="slave_readdata" internal="slave_readdata" />
+  <port name="slave_chipselect" internal="slave_chipselect" />
+  <port name="slave_read" internal="slave_read" />
+  <port name="slave_address" internal="slave_address" />
+ </interface>
+ <module name="adc_0" kind="adc" version="1.0" enabled="1" autoexport="1" />
+ <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
+ <interconnectRequirement for="$system" name="qsys_mm.enableEccProtection" value="FALSE" />
+ <interconnectRequirement for="$system" name="qsys_mm.insertDefaultSlave" value="FALSE" />
+ <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
+</system>

@@ -1,0 +1,48 @@
+<internal_error>
+	<executable>quartus</executable>
+	<sub_system>MEM</sub_system>
+	<error>*** Fatal Error: Out of memory in module quartus (5544 megabytes used)</error>
+	<date>Thu Feb 16 11:29:12 2017</date>
+	<version>Version 16.1.2 Build 203 01/18/2017 SJ Lite Edition</version>
+</internal_error>
+
+<internal_error>
+	<executable>quartus</executable>
+	<sub_system>MEM</sub_system>
+	<error>*** Fatal Error: Out of memory in module quartus (5651 megabytes used)</error>
+	<date>Thu Feb 16 11:56:23 2017</date>
+	<version>Version 16.1.2 Build 203 01/18/2017 SJ Lite Edition</version>
+</internal_error>
+
+<internal_error>
+	<executable>quartus</executable>
+	<sub_system>MEM</sub_system>
+	<error>*** Fatal Error: Out of memory in module quartus (5948 megabytes used)</error>
+	<date>Thu Feb 16 12:40:04 2017</date>
+	<version>Version 16.1.2 Build 203 01/18/2017 SJ Lite Edition</version>
+</internal_error>
+
+<internal_error>
+	<executable>quartus</executable>
+	<sub_system>MEM</sub_system>
+	<error>*** Fatal Error: Out of memory in module quartus (5451 megabytes used)</error>
+	<date>Tue Mar 14 18:59:19 2017</date>
+	<version>Version 16.1.2 Build 203 01/18/2017 SJ Lite Edition</version>
+</internal_error>
+
+<internal_error>
+	<executable>quartus</executable>
+	<sub_system>MEM</sub_system>
+	<error>*** Fatal Error: Out of memory in module quartus (5897 megabytes used)</error>
+	<date>Tue Mar 21 18:07:37 2017</date>
+	<version>Version 16.1.2 Build 203 01/18/2017 SJ Lite Edition</version>
+</internal_error>
+
+<internal_error>
+	<executable>quartus</executable>
+	<sub_system>MEM</sub_system>
+	<error>*** Fatal Error: Out of memory in module quartus (4538 megabytes used)</error>
+	<date>Tue Mar 28 15:54:38 2017</date>
+	<version>Version 16.1.2 Build 203 01/18/2017 SJ Lite Edition</version>
+</internal_error>
+
