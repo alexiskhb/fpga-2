@@ -15,3 +15,12 @@
 
 Используемый [style guide](https://github.com/msporyshev/fefuauv-styleguide)
 
+В случае, когда uboot сломался подключаемся через screen и выполняем:
+
+setenv fpga2sdram-handoff 0
+
+setenv fpga2sdram_handoff 0*
+
+run bridge_enable_handoff
+
+run mmcboot
