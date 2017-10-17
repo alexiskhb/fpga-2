@@ -139,19 +139,6 @@ module dsp (
         .end_address        (end_address)
     );
 
-    sdram_driver sdram_driver_inst (
-        .clk                (clk),
-        .address            (sdram0_address),
-        .write_en           (sdram0_write),
-        .writedata          (sdram0_writedata),
-        .waitrequest        (sdram0_waitrequest),
-        .data               (test),
-        .interrupt_id       (interrupt_id),
-        .mem_addr           (mem_addr),
-        .end_address        (end_address)
-    );
-
-
     scfifo    tx_fifo (
                 .clock              (clk),
                 .data               (data_tx),
@@ -602,19 +589,7 @@ module decoder_rx (
                           .ast_sink_valid   (data_valid),
                           .ast_source_data  (data_out_fir),
                           .ast_source_valid (data_valid_fir));
-
-    m_filter m_filter_inst0 (.clk            (clk),
-                             .data_in        (data_in_mf),
-                             .data_out       (data_out_mf0));
-
-    m_filter m_filter_inst1 (.clk            (clk),
-                             .data_in        (data_out_mf0),
-                             .data_out       (data_out_mf1));
-    defparam m_filter_inst1.DETECTOR_COEFFS = 5'b10111,
-             m_filter_inst1.DETECTOR_COEFFS_NUM = 5,
-             m_filter_inst1.DELAY_STEP = 295,                 // DETECTOR_COEFFS_NUM * (dif_coef_size + 1)    , dif_coef_size = 14
-             m_filter_inst1.MAX_COUNT = 2500;                 // (100MHz / 20kHz), 20kHz - frequency of matched filter
-
+    
 endmodule
 
 

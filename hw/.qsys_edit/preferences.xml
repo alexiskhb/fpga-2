@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<preferences>
+ <debug showDebugMenu="0" />
+ <systemtable filter="All Interfaces">
+  <columns>
+   <connections preferredWidth="159" />
+   <irq preferredWidth="47" />
+   <inputclock preferredWidth="265" />
+   <export preferredWidth="277" />
+   <name preferredWidth="331" />
+  </columns>
+ </systemtable>
+ <library
+   expandedCategories="Project/Terasic Qsys Component,Library,Project/System,Project" />
+ <window width="1565" height="1000" x="111" y="57" />
+</preferences>
