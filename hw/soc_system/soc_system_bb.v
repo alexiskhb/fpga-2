@@ -72,6 +72,7 @@ module soc_system (
 	memory_oct_rzqin,
 	ports_led,
 	ports_gpio,
+	ports_new_signal,
 	reset_reset_n);	
 
 	input		clk_clk;
@@ -146,5 +147,6 @@ module soc_system (
 	input		memory_oct_rzqin;
 	output	[7:0]	ports_led;
 	output	[7:0]	ports_gpio;
+	output		ports_new_signal;
 	input		reset_reset_n;
 endmodule

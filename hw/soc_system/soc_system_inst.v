@@ -71,6 +71,7 @@
 		.memory_oct_rzqin                      (<connected-to-memory_oct_rzqin>),                      //                          .oct_rzqin
 		.ports_led                             (<connected-to-ports_led>),                             //                     ports.led
 		.ports_gpio                            (<connected-to-ports_gpio>),                            //                          .gpio
+		.ports_new_signal                      (<connected-to-ports_new_signal>),                      //                          .new_signal
 		.reset_reset_n                         (<connected-to-reset_reset_n>)                          //                     reset.reset_n
 	);
 

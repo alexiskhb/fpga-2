@@ -1,5 +1,5 @@
 Assembler report for top
-Tue Oct 17 23:32:53 2017
+Thu Oct 19 23:13:52 2017
 Quartus Prime Version 17.0.0 Build 595 04/25/2017 SJ Lite Edition
 
 
@@ -39,7 +39,7 @@ agreement for further details.
 +---------------------------------------------------------------+
 ; Assembler Summary                                             ;
 +-----------------------+---------------------------------------+
-; Assembler Status      ; Successful - Tue Oct 17 23:32:53 2017 ;
+; Assembler Status      ; Successful - Thu Oct 19 23:13:52 2017 ;
 ; Revision Name         ; top                                   ;
 ; Top-level Entity Name ; top                                   ;
 ; Family                ; Cyclone V                             ;
@@ -78,8 +78,8 @@ agreement for further details.
 +----------------+------------------+
 ; Option         ; Setting          ;
 +----------------+------------------+
-; JTAG usercode  ; 0x00688BEC       ;
-; Checksum       ; 0x00688BEC       ;
+; JTAG usercode  ; 0x0067E4EB       ;
+; Checksum       ; 0x0067E4EB       ;
 +----------------+------------------+
 
 
@@ -89,14 +89,14 @@ agreement for further details.
 Info: *******************************************************************
 Info: Running Quartus Prime Assembler
     Info: Version 17.0.0 Build 595 04/25/2017 SJ Lite Edition
-    Info: Processing started: Tue Oct 17 23:32:46 2017
+    Info: Processing started: Thu Oct 19 23:13:44 2017
 Info: Command: quartus_asm --read_settings_files=off --write_settings_files=off top -c top
 Info (115030): Assembler is generating device programming files
 Info (11878): Hard Processor Subsystem configuration has not changed and a Preloader software update is not required
 Info: Quartus Prime Assembler was successful. 0 errors, 0 warnings
-    Info: Peak virtual memory: 1011 megabytes
-    Info: Processing ended: Tue Oct 17 23:32:53 2017
-    Info: Elapsed time: 00:00:07
+    Info: Peak virtual memory: 1004 megabytes
+    Info: Processing ended: Thu Oct 19 23:13:52 2017
+    Info: Elapsed time: 00:00:08
     Info: Total CPU time (on all processors): 00:00:08
 
 

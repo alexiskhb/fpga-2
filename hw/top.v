@@ -154,6 +154,7 @@ module top(
     wire        hps_debug_reset;
     wire [27:0] stm_hw_events;
     wire        fpga_clk_50;
+    wire        key_dt;
 
     soc_system u0 (
         //Clock&Reset
@@ -247,13 +248,25 @@ module top(
         //.dac_clk                               (GPIO_1[11]),                //                               .clk
         //.dac_sync                              (GPIO_1[13]),                //                               .sync
         .ports_led                             (LED),
-        .ports_gpio                            (GPIO_1[7:0])
+        .ports_gpio                            (GPIO_1[7:0]),
+        .ports_key                             (key_dt)
     );
 
     
     // connection of internal logics
     assign fpga_clk_50=FPGA_CLK_50;
     assign stm_hw_events = {{22{1'b0}}, SW, fpga_debounced_buttons};
+
+    altera_edge_detector edge_key (
+      .clk       (fpga_clk_50),
+      .rst_n     (hps_fpga_reset_n),
+      .signal_in (KEY[0]),
+      .pulse_out (key_dt)
+    );
+
+      defparam edge_key.PULSE_EXT = 1;
+      defparam edge_key.EDGE_TYPE = 1;
+      defparam edge_key.IGNORE_RST_WHILE_BUSY = 1;
      
      // Debounce logic to clean out glitches within 1ms
     debounce debounce_inst (

@@ -23,7 +23,8 @@ module hps_driver (
         output reg        [31:0]    comp_threshold = 32'd6,
         output reg        [31:0]    guard_interval,
         output reg        [31:0]    mem_addr = 32'd0,
-        input wire        [31:0]    end_address
+        input wire        [31:0]    end_address,
+        output reg                  key
     );
 
 localparam  memory_size =               8'h00,

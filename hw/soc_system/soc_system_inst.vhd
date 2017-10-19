@@ -72,6 +72,7 @@
 			memory_oct_rzqin                      : in    std_logic                     := 'X';             -- oct_rzqin
 			ports_led                             : out   std_logic_vector(7 downto 0);                     -- led
 			ports_gpio                            : out   std_logic_vector(7 downto 0);                     -- gpio
+			ports_new_signal                      : out   std_logic;                                        -- new_signal
 			reset_reset_n                         : in    std_logic                     := 'X'              -- reset_n
 		);
 	end component soc_system;
@@ -150,6 +151,7 @@
 			memory_oct_rzqin                      => CONNECTED_TO_memory_oct_rzqin,                      --                          .oct_rzqin
 			ports_led                             => CONNECTED_TO_ports_led,                             --                     ports.led
 			ports_gpio                            => CONNECTED_TO_ports_gpio,                            --                          .gpio
+			ports_new_signal                      => CONNECTED_TO_ports_new_signal,                      --                          .new_signal
 			reset_reset_n                         => CONNECTED_TO_reset_reset_n                          --                     reset.reset_n
 		);
 

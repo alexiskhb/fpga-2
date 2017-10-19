@@ -76,6 +76,7 @@ module soc_system (
 		input  wire        memory_oct_rzqin,                      //                          .oct_rzqin
 		output wire [7:0]  ports_led,                             //                     ports.led
 		output wire [7:0]  ports_gpio,                            //                          .gpio
+		output wire        ports_key,                             //                          .key
 		input  wire        reset_reset_n                          //                     reset.reset_n
 	);
 
@@ -139,6 +140,7 @@ module soc_system (
 		.irq                (irq_mapper_receiver0_irq),                      // interrupt_sender.irq
 		.led                (ports_led),                                     //           portio.led
 		.pins               (ports_gpio),                                    //                 .gpio
+		.key                (ports_key),                                     //                 .key
 		.sdram0_address     (),                                              //    avalon_master.address
 		.sdram0_write       (),                                              //                 .write
 		.sdram0_writedata   (),                                              //                 .writedata

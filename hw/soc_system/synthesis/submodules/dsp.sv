@@ -28,7 +28,8 @@ module dsp (
         input  wire                sdram0_waitrequest,     //                        .waitrequest
         output wire        [7:0]   led,                    //                        .led
         output reg         [7:0]   pins,                   //                        .led
-        output wire                irq                     //                        .irq
+        output wire                irq,                    //                        .irq
+        output wire                key
     );
 
     wire            [7:0]           coder_data_out;
@@ -136,7 +137,8 @@ module dsp (
         .comp_threshold     (comp_threshold),
         .guard_interval     (guard_interval),
         .mem_addr           (mem_addr),
-        .end_address        (end_address)
+        .end_address        (end_address),
+        .key                (key)
     );
 
     scfifo    tx_fifo (
