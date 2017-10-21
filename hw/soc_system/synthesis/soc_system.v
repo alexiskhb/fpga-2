@@ -76,7 +76,7 @@ module soc_system (
 		input  wire        memory_oct_rzqin,                      //                          .oct_rzqin
 		output wire [7:0]  ports_led,                             //                     ports.led
 		output wire [7:0]  ports_gpio,                            //                          .gpio
-		output wire        ports_key,                             //                          .key
+		input  wire [1:0]  ports_key,                             //                          .key
 		input  wire        reset_reset_n                          //                     reset.reset_n
 	);
 

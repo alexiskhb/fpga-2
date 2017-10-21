@@ -1,5 +1,5 @@
 Flow report for top
-Thu Oct 19 23:14:30 2017
+Sat Oct 21 15:17:28 2017
 Quartus Prime Version 17.0.0 Build 595 04/25/2017 SJ Lite Edition
 
 
@@ -41,15 +41,15 @@ agreement for further details.
 +-------------------------------------------------------------------------------+
 ; Flow Summary                                                                  ;
 +---------------------------------+---------------------------------------------+
-; Flow Status                     ; Successful - Thu Oct 19 23:14:30 2017       ;
+; Flow Status                     ; Successful - Sat Oct 21 15:17:28 2017       ;
 ; Quartus Prime Version           ; 17.0.0 Build 595 04/25/2017 SJ Lite Edition ;
 ; Revision Name                   ; top                                         ;
 ; Top-level Entity Name           ; top                                         ;
 ; Family                          ; Cyclone V                                   ;
 ; Device                          ; 5CSEMA4U23C6                                ;
 ; Timing Models                   ; Final                                       ;
-; Logic utilization (in ALMs)     ; 739 / 15,880 ( 5 % )                        ;
-; Total registers                 ; 1339                                        ;
+; Logic utilization (in ALMs)     ; 638 / 15,880 ( 4 % )                        ;
+; Total registers                 ; 1243                                        ;
 ; Total pins                      ; 177 / 314 ( 56 % )                          ;
 ; Total virtual pins              ; 0                                           ;
 ; Total block memory bits         ; 9,216 / 2,764,800 ( < 1 % )                 ;
@@ -68,7 +68,7 @@ agreement for further details.
 +-------------------+---------------------+
 ; Option            ; Setting             ;
 +-------------------+---------------------+
-; Start date & time ; 10/19/2017 23:08:58 ;
+; Start date & time ; 10/21/2017 15:11:59 ;
 ; Main task         ; Compilation         ;
 ; Revision Name     ; top                 ;
 +-------------------+---------------------+
@@ -79,7 +79,7 @@ agreement for further details.
 +---------------------------------------+--------------------------------------------------------------------------+---------------+--------------------------------+------------------+
 ; Assignment Name                       ; Value                                                                    ; Default Value ; Entity Name                    ; Section Id       ;
 +---------------------------------------+--------------------------------------------------------------------------+---------------+--------------------------------+------------------+
-; COMPILER_SIGNATURE_ID                 ; 53350634538263.150841853512049                                           ; --            ; --                             ; --               ;
+; COMPILER_SIGNATURE_ID                 ; 53350634538263.150856271625696                                           ; --            ; --                             ; --               ;
 ; ECO_REGENERATE_REPORT                 ; On                                                                       ; Off           ; --                             ; --               ;
 ; EDA_OUTPUT_DATA_FORMAT                ; Systemverilog Hdl                                                        ; --            ; --                             ; eda_simulation   ;
 ; EDA_SIMULATION_TOOL                   ; ModelSim-Altera (SystemVerilog)                                          ; <None>        ; --                             ; --               ;
@@ -170,7 +170,7 @@ agreement for further details.
 ; SLD_FILE                              ; soc_system/synthesis/soc_system.regmap                                   ; --            ; --                             ; --               ;
 ; SLD_FILE                              ; soc_system/synthesis/soc_system.debuginfo                                ; --            ; --                             ; --               ;
 ; SLD_FILE                              ; db/stp1_auto_stripped.stp                                                ; --            ; --                             ; --               ;
-; SLD_INFO                              ; QSYS_NAME soc_system HAS_SOPCINFO 1 GENERATION_ID 1508417527             ; --            ; soc_system                     ; --               ;
+; SLD_INFO                              ; QSYS_NAME soc_system HAS_SOPCINFO 1 GENERATION_ID 1508559073             ; --            ; soc_system                     ; --               ;
 ; SLD_NODE_CREATOR_ID                   ; 110                                                                      ; --            ; --                             ; auto_signaltap_0 ;
 ; SLD_NODE_ENTITY_NAME                  ; sld_signaltap                                                            ; --            ; --                             ; auto_signaltap_0 ;
 ; SLD_NODE_PARAMETER_ASSIGNMENT         ; SLD_RAM_BLOCK_TYPE=AUTO                                                  ; --            ; --                             ; auto_signaltap_0 ;
@@ -216,12 +216,12 @@ agreement for further details.
 +---------------------------+--------------+-------------------------+---------------------+------------------------------------+
 ; Module Name               ; Elapsed Time ; Average Processors Used ; Peak Virtual Memory ; Total CPU Time (on all processors) ;
 +---------------------------+--------------+-------------------------+---------------------+------------------------------------+
-; Analysis & Synthesis      ; 00:00:35     ; 1.0                     ; 1367 MB             ; 00:01:07                           ;
-; Fitter                    ; 00:01:07     ; 1.1                     ; 2709 MB             ; 00:01:40                           ;
-; Assembler                 ; 00:00:08     ; 1.0                     ; 1004 MB             ; 00:00:08                           ;
-; TimeQuest Timing Analyzer ; 00:00:30     ; 1.1                     ; 1642 MB             ; 00:00:34                           ;
-; EDA Netlist Writer        ; 00:00:05     ; 1.0                     ; 1221 MB             ; 00:00:05                           ;
-; Total                     ; 00:02:25     ; --                      ; --                  ; 00:03:34                           ;
+; Analysis & Synthesis      ; 00:00:34     ; 1.0                     ; 1414 MB             ; 00:01:06                           ;
+; Fitter                    ; 00:01:05     ; 1.1                     ; 2710 MB             ; 00:01:36                           ;
+; Assembler                 ; 00:00:07     ; 1.0                     ; 1011 MB             ; 00:00:08                           ;
+; TimeQuest Timing Analyzer ; 00:00:30     ; 1.1                     ; 1632 MB             ; 00:00:34                           ;
+; EDA Netlist Writer        ; 00:00:05     ; 1.0                     ; 1216 MB             ; 00:00:05                           ;
+; Total                     ; 00:02:21     ; --                      ; --                  ; 00:03:29                           ;
 +---------------------------+--------------+-------------------------+---------------------+------------------------------------+
 
 

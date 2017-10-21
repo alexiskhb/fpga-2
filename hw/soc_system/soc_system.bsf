@@ -144,6 +144,13 @@ agreement for further details.
 		(line (pt 752 352)(pt 480 352)(line_width 1))
 	)
 	(port
+		(pt 0 1096)
+		(input)
+		(text "ports_key[1..0]" (rect 0 0 60 12)(font "Arial" (font_size 8)))
+		(text "ports_key[1..0]" (rect 4 1085 94 1096)(font "Arial" (font_size 8)))
+		(line (pt 0 1096)(pt 272 1096)(line_width 3))
+	)
+	(port
 		(pt 0 1136)
 		(input)
 		(text "reset_reset_n" (rect 0 0 56 12)(font "Arial" (font_size 8)))
@@ -345,13 +352,6 @@ agreement for further details.
 		(text "ports_gpio[7..0]" (rect 0 0 61 12)(font "Arial" (font_size 8)))
 		(text "ports_gpio[7..0]" (rect 4 1069 100 1080)(font "Arial" (font_size 8)))
 		(line (pt 0 1080)(pt 272 1080)(line_width 3))
-	)
-	(port
-		(pt 0 1096)
-		(output)
-		(text "ports_key" (rect 0 0 41 12)(font "Arial" (font_size 8)))
-		(text "ports_key" (rect 4 1085 58 1096)(font "Arial" (font_size 8)))
-		(line (pt 0 1096)(pt 272 1096)(line_width 1))
 	)
 	(port
 		(pt 0 368)

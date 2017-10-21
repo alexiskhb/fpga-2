@@ -24,7 +24,7 @@ module hps_driver (
         output reg        [31:0]    guard_interval,
         output reg        [31:0]    mem_addr = 32'd0,
         input wire        [31:0]    end_address,
-        output reg                  key
+        input wire                  key
     );
 
 localparam  memory_size =               8'h00,
@@ -53,21 +53,23 @@ localparam  D_D =                   8'h01,
 
 reg         [7:0]                   data_type = 8'd0;
 
-always @ (posedge clk) begin    
+always @ (posedge clk) begin
+    if (key) begin
+        led <= 0;
+    end else begin
+        led <= 1;
+    end
     if (chipselect) begin
         if(write_en) begin
             case(address)
                 memory_data: begin                   
-                         led <= writedata[7:0];
-                          irq <= 1'b1;
+                        led <= writedata[7:0];
                      end
             endcase
         end else 
-         if (read_en) begin
-              case(address)
-                    memory_size : irq <= 1'b0;
-                endcase  
-         end 
+        if (read_en) begin            
+            irq <= 1'b0;
+        end 
     end 
 end
 

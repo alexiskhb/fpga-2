@@ -255,7 +255,7 @@ module top(
     
     // connection of internal logics
     assign fpga_clk_50=FPGA_CLK_50;
-    assign stm_hw_events = {{22{1'b0}}, SW, fpga_debounced_buttons};
+    assign stm_hw_events = {{22{1'b0}}, SW, fpga_debounced_buttons};    
 
     altera_edge_detector edge_key (
       .clk       (fpga_clk_50),

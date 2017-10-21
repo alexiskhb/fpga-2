@@ -72,7 +72,7 @@
 			memory_oct_rzqin                      : in    std_logic                     := 'X';             -- oct_rzqin
 			ports_led                             : out   std_logic_vector(7 downto 0);                     -- led
 			ports_gpio                            : out   std_logic_vector(7 downto 0);                     -- gpio
-			ports_key                             : out   std_logic;                                        -- key
+			ports_key                             : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- key
 			reset_reset_n                         : in    std_logic                     := 'X'              -- reset_n
 		);
 	end component soc_system;
