@@ -54,9 +54,13 @@ localparam  D_D =                   8'h01,
 reg         [7:0]                   data_type = 8'd0;
 
 always @ (posedge clk) begin
-    if (!key[0]) begin
+    if (key[1]) begin
         led[0] <= 1;
         led[1] <= 1;
+    end
+    if (key[0]) begin
+        led[0] <= 0;
+        led[1] <= 0;
     end
     // if (chipselect) begin
     //     if(write_en) begin
