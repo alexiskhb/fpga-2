@@ -55,22 +55,20 @@ reg         [7:0]                   data_type = 8'd0;
 
 always @ (posedge clk) begin
     if (key) begin
-        led <= 0;
-    end else begin
-        led <= 1;
+        led <= ~led;
     end
-    if (chipselect) begin
-        if(write_en) begin
-            case(address)
-                memory_data: begin                   
-                        led <= writedata[7:0];
-                     end
-            endcase
-        end else 
-        if (read_en) begin            
-            irq <= 1'b0;
-        end 
-    end 
+    // if (chipselect) begin
+    //     if(write_en) begin
+    //         case(address)
+    //             memory_data: begin                   
+    //                     led <= writedata[7:0];
+    //                  end
+    //         endcase
+    //     end else 
+    //     if (read_en) begin            
+    //         irq <= 1'b0;
+    //     end 
+    // end 
 end
 
 

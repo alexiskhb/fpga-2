@@ -11,6 +11,6 @@
   </columns>
  </systemtable>
  <library
-   expandedCategories="Project/Terasic Qsys Component,Project/System,Project,Library" />
- <window width="1350" height="1000" x="76" y="72" />
+   expandedCategories="Project/System,Project/Terasic Qsys Component,Project,Library" />
+ <window width="1500" height="1000" x="105" y="54" />
 </preferences>

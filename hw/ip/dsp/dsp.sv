@@ -29,7 +29,7 @@ module dsp (
         output wire        [7:0]   led,                    //                        .led
         output reg         [7:0]   pins,                   //                        .led
         output wire                irq,                    //                        .irq
-        input wire        [1:0]   key
+        input wire                 key
     );
 
     wire            [7:0]           coder_data_out;

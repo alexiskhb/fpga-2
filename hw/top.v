@@ -154,7 +154,7 @@ module top(
     wire        hps_debug_reset;
     wire [27:0] stm_hw_events;
     wire        fpga_clk_50;
-    wire        key_dt;
+    wire [1:0]  key_dt;
 
     soc_system u0 (
         //Clock&Reset
@@ -260,7 +260,7 @@ module top(
     altera_edge_detector edge_key (
       .clk       (fpga_clk_50),
       .rst_n     (hps_fpga_reset_n),
-      .signal_in (KEY[0]),
+      .signal_in (fpga_debounced_buttons),
       .pulse_out (key_dt)
     );
 
