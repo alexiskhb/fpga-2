@@ -31,3 +31,5 @@ hw/timing/
 hw/testbench/
 hw/*_sim/
 hw/*.stp
+hw/hps_isw_handoff/build
+hw/hps_isw_handoff/build.bckp
