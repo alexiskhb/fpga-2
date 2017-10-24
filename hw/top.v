@@ -255,7 +255,7 @@ module top(
     
     // connection of internal logics
     assign fpga_clk_50=FPGA_CLK_50;
-    assign stm_hw_events = {{22{1'b0}}, SW, fpga_debounced_buttons};    
+    assign stm_hw_events = {{22{1'b0}}, SW, fpga_debounced_buttons};
 
     altera_edge_detector edge_key_0 (
       .clk       (fpga_clk_50),
@@ -263,22 +263,20 @@ module top(
       .signal_in (fpga_debounced_buttons[0]),
       .pulse_out (key_dt[0])
     );
-
       defparam edge_key_0.PULSE_EXT = 1;
       defparam edge_key_0.EDGE_TYPE = 1;
-      defparam edge_key_0.IGNORE_RST_WHILE_BUSY = 1;
-     
+      defparam edge_key_0.IGNORE_RST_WHILE_BUSY = 0;
+
     altera_edge_detector edge_key_1 (
       .clk       (fpga_clk_50),
       .rst_n     (hps_fpga_reset_n),
       .signal_in (fpga_debounced_buttons[1]),
       .pulse_out (key_dt[1])
     );
-
       defparam edge_key_1.PULSE_EXT = 1;
       defparam edge_key_1.EDGE_TYPE = 1;
-      defparam edge_key_1.IGNORE_RST_WHILE_BUSY = 1;
-
+      defparam edge_key_1.IGNORE_RST_WHILE_BUSY = 0;
+     
      // Debounce logic to clean out glitches within 1ms
     debounce debounce_inst (
       .clk                                  (fpga_clk_50),
