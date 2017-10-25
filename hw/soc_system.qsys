@@ -279,7 +279,13 @@
  <parameter name="timeStamp" value="0" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
+ <interface name="adc" internal="adc.conduit_end" type="conduit" dir="end" />
  <interface name="clk" internal="clk_0.clk_in" type="clock" dir="end" />
+ <interface
+   name="dac"
+   internal="dac_ad7303_0.conduit_end"
+   type="conduit"
+   dir="end" />
  <interface
    name="hps_0_f2h_cold_reset_req"
    internal="hps_0.f2h_cold_reset_req"
@@ -310,14 +316,14 @@
  <interface name="memory" internal="hps_0.memory" type="conduit" dir="end" />
  <interface name="ports" internal="dsp.portio" type="conduit" dir="end" />
  <interface name="reset" internal="clk_0.clk_in_reset" type="reset" dir="end" />
- <module name="adc" kind="adc" version="1.0" enabled="0" />
+ <module name="adc" kind="adc" version="1.0" enabled="1" />
  <module name="clk_0" kind="clock_source" version="17.0" enabled="1">
   <parameter name="clockFrequency" value="50000000" />
   <parameter name="clockFrequencyKnown" value="true" />
   <parameter name="inputClockFrequency" value="0" />
   <parameter name="resetSynchronousEdges" value="NONE" />
  </module>
- <module name="dac_ad7303_0" kind="dac_ad7303" version="1.0" enabled="0" />
+ <module name="dac_ad7303_0" kind="dac_ad7303" version="1.0" enabled="1" />
  <module name="dsp" kind="dsp" version="1.0" enabled="1" />
  <module
    name="fpga_only_master"
@@ -1264,6 +1270,11 @@
  <connection
    kind="clock"
    version="17.0"
+   start="pll_0.outclk0"
+   end="dac_ad7303_0.dac_clk" />
+ <connection
+   kind="clock"
+   version="17.0"
    start="pll_0.outclk1"
    end="adc.clock_sink_adc" />
  <connection
@@ -1301,12 +1312,17 @@
    kind="clock"
    version="17.0"
    start="pll_0.outclk2"
-   end="adc.clock_sink" />
+   end="dac_ad7303_0.clock" />
  <connection
    kind="clock"
    version="17.0"
    start="pll_0.outclk2"
    end="dsp.clock_sink" />
+ <connection
+   kind="clock"
+   version="17.0"
+   start="pll_0.outclk2"
+   end="adc.clock_sink" />
  <connection
    kind="clock"
    version="17.0"
@@ -1378,6 +1394,11 @@
    kind="reset"
    version="17.0"
    start="clk_0.clk_reset"
+   end="dac_ad7303_0.reset" />
+ <connection
+   kind="reset"
+   version="17.0"
+   start="clk_0.clk_reset"
    end="onchip_memory2_0.reset1" />
  <connection
    kind="reset"
@@ -1388,12 +1409,12 @@
    kind="reset"
    version="17.0"
    start="clk_0.clk_reset"
-   end="adc.reset_sink" />
+   end="dsp.reset_sink" />
  <connection
    kind="reset"
    version="17.0"
    start="clk_0.clk_reset"
-   end="dsp.reset_sink" />
+   end="adc.reset_sink" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
 </system>

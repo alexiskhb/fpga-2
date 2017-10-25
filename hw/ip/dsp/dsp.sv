@@ -138,7 +138,8 @@ module dsp (
         .guard_interval     (guard_interval),
         .mem_addr           (mem_addr),
         .end_address        (end_address),
-        .key                (key)
+        .key                (key),
+        .streaming_sink_data (streaming_sink_data)
     );
 
     sdram_driver sdram_driver_inst (

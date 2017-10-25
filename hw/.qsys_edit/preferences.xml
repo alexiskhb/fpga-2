@@ -3,14 +3,11 @@
  <debug showDebugMenu="0" />
  <systemtable filter="All Interfaces">
   <columns>
-   <connections preferredWidth="303" />
+   <connections preferredWidth="319" />
    <irq preferredWidth="63" />
-   <inputclock preferredWidth="265" />
-   <export preferredWidth="277" />
-   <name preferredWidth="331" />
+   <name preferredWidth="253" />
   </columns>
  </systemtable>
- <library
-   expandedCategories="Project/System,Library,Project/Terasic Qsys Component,Project" />
- <window width="1451" height="881" x="138" y="100" />
+ <library expandedCategories="Library,Project" />
+ <window width="1416" height="984" x="99" y="70" />
 </preferences>

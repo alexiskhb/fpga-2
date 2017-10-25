@@ -1,12 +1,12 @@
-# system info soc_system on 2017.10.12.20:11:57
+# system info soc_system on 2017.01.11.16:56:41
 system_info:
 name,value
 DEVICE,5CSEMA4U23C6
 DEVICE_FAMILY,Cyclone V
-GENERATION_ID,1507799508
+GENERATION_ID,1484117782
 #
 #
-# Files generated for soc_system on 2017.10.12.20:11:57
+# Files generated for soc_system on 2017.01.11.16:56:41
 files:
 filepath,kind,attributes,module,is_top
 simulation/soc_system.v,VERILOG,,soc_system,true
@@ -14,6 +14,8 @@ simulation/soc_system.v,VERILOG,,soc_system,true
 # Map from instance-path to kind of module
 instances:
 instancePath,module
+soc_system.adc,soc_system_adc
+soc_system.dac_ad7303_0,soc_system_dac_ad7303_0
 soc_system.dsp,soc_system_dsp
 soc_system.fpga_only_master,soc_system_fpga_only_master
 soc_system.hps_only_master,soc_system_fpga_only_master
@@ -25,7 +27,6 @@ soc_system.pll_0,soc_system_pll_0
 soc_system.sysid_qsys,soc_system_sysid_qsys
 soc_system.mm_interconnect_0,soc_system_mm_interconnect_0
 soc_system.mm_interconnect_1,soc_system_mm_interconnect_1
-soc_system.mm_interconnect_2,soc_system_mm_interconnect_2
 soc_system.irq_mapper,soc_system_irq_mapper
 soc_system.irq_mapper_001,soc_system_irq_mapper_001
 soc_system.irq_mapper_002,soc_system_irq_mapper_002

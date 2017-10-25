@@ -33,7 +33,7 @@
 //Users can enable any group by uncommenting the corresponding line below:
 `define enable_ADC
 //`define enable_ARDUINO
-//`define enable_GPIO0
+`define enable_GPIO0
 `define enable_GPIO1
 `define enable_HPS
 
@@ -240,13 +240,13 @@ module top(
         .hps_0_f2h_stm_hw_events_stm_hwevents  (stm_hw_events ),            //                               hps_0_f2h_stm_hw_events.stm_hwevents
         .hps_0_f2h_warm_reset_req_reset_n      (~hps_warm_reset ),          //                               hps_0_f2h_warm_reset_req.reset_n
         //ADC_DAC
-        //.adc_convst                            (ADC_CONVST),                //                               adc.convst
-        //.adc_sck                               (ADC_SCLK),                  //                               .sck
-        //.adc_sdi                               (ADC_SDI),                   //                               .sdi
-        //.adc_sdo                               (ADC_SDO),                   //                               .sdo
-        //.dac_din                               (GPIO_1[15]),                //                               dac.din
-        //.dac_clk                               (GPIO_1[11]),                //                               .clk
-        //.dac_sync                              (GPIO_1[13]),                //                               .sync
+        .adc_convst                            (ADC_CONVST),                //                               adc.convst
+        .adc_sck                               (ADC_SCLK),                  //                               .sck
+        .adc_sdi                               (ADC_SDI),                   //                               .sdi
+        .adc_sdo                               (ADC_SDO),                   //                               .sdo
+        .dac_din                               (GPIO_1[15]),                //                               dac.din
+        .dac_clk                               (GPIO_1[11]),                //                               .clk
+        .dac_sync                              (GPIO_1[13]),                //                               .sync
         .ports_led                             (LED),
         .ports_gpio                            (GPIO_1[7:0]),
         .ports_key                             (key_dt)

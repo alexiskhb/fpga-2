@@ -1,6 +1,13 @@
 
 module soc_system (
+	adc_convst,
+	adc_sck,
+	adc_sdi,
+	adc_sdo,
 	clk_clk,
+	dac_din,
+	dac_clk,
+	dac_sync,
 	hps_0_f2h_cold_reset_req_reset_n,
 	hps_0_f2h_debug_reset_req_reset_n,
 	hps_0_f2h_stm_hw_events_stm_hwevents,
@@ -75,7 +82,14 @@ module soc_system (
 	ports_key,
 	reset_reset_n);	
 
+	output		adc_convst;
+	output		adc_sck;
+	output		adc_sdi;
+	input		adc_sdo;
 	input		clk_clk;
+	output		dac_din;
+	output		dac_clk;
+	output		dac_sync;
 	input		hps_0_f2h_cold_reset_req_reset_n;
 	input		hps_0_f2h_debug_reset_req_reset_n;
 	input	[27:0]	hps_0_f2h_stm_hw_events_stm_hwevents;
