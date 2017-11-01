@@ -272,7 +272,7 @@
  <parameter name="hideFromIPCatalog" value="false" />
  <parameter name="lockedInterfaceDefinition" value="" />
  <parameter name="maxAdditionalLatency" value="1" />
- <parameter name="projectName" value="top.qpf" />
+ <parameter name="projectName" value="soc_system.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="0" />
  <parameter name="testBenchDutName" value="" />
@@ -1270,11 +1270,6 @@
  <connection
    kind="clock"
    version="17.0"
-   start="pll_0.outclk0"
-   end="dac_ad7303_0.dac_clk" />
- <connection
-   kind="clock"
-   version="17.0"
    start="pll_0.outclk1"
    end="adc.clock_sink_adc" />
  <connection
@@ -1303,11 +1298,6 @@
    version="17.0"
    start="pll_0.outclk2"
    end="intr_capturer_0.clock" />
- <connection
-   kind="clock"
-   version="17.0"
-   start="pll_0.outclk2"
-   end="dac_ad7303_0.clock" />
  <connection
    kind="clock"
    version="17.0"
@@ -1385,11 +1375,6 @@
    start="clk_0.clk_reset"
    end="jtag_uart.reset" />
  <connection kind="reset" version="17.0" start="clk_0.clk_reset" end="pll_0.reset" />
- <connection
-   kind="reset"
-   version="17.0"
-   start="clk_0.clk_reset"
-   end="dac_ad7303_0.reset" />
  <connection
    kind="reset"
    version="17.0"
