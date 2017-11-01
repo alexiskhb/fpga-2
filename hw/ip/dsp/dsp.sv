@@ -86,6 +86,7 @@ module dsp (
             led[1] <= 1'b0;
             irq <= 1'b0;
         end
+        led <= streaming_sink_data;
     end
 
 
