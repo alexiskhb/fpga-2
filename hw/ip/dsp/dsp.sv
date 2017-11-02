@@ -26,67 +26,40 @@ module dsp (
         output wire                sdram0_write,           //                        .write
         output wire        [63:0]  sdram0_writedata,       //                        .writedata
         input  wire                sdram0_waitrequest,     //                        .waitrequest
-        output reg        [7:0]   led,                    //                        .led
+        output reg         [7:0]   led,                    //                        .led
         output reg         [7:0]   pins,                   //                        .led
-        output reg                irq,                     //                        .irq
+        output reg                 irq,                     //                        .irq
         input wire         [1:0]   key
     );
 
-    wire            [7:0]           coder_data_out;
-    wire                            coder_ready;
-    wire signed     [31:0]          fir_sink_data;
-    wire                            fir_sink_valid;
+localparam memory_data = 8'h04;
 
-    wire            [7:0]           data_fifo_tx;
-    wire                            rden_fifo_tx;
-    wire                            wren_fifo_tx;
-    wire            [7:0]           data_tx;
-    wire            [7:0]           size_fifo_tx;
-    wire                            ready_tx;
-    wire                            start_tx;
-
-    wire            [7:0]           data_fifo_rx;
-    wire                            rden_fifo_rx;
-    wire                            wren_fifo_rx;
-    wire            [7:0]           data_rx;
-    wire            [7:0]           size_fifo_rx;
-    wire            [7:0]           interrupt_id;
-    wire                            navig_timer_start;
-    wire signed     [31:0]          test;
-    wire signed     [12:0]          data_in;
-
-    wire            [31:0]          guard_interval;
-    wire            [31:0]          rx_threshold;
-    wire            [31:0]          comp_threshold;
-    wire            [31:0]          mem_addr;
-    wire            [31:0]          end_address;
-    wire                            data_ready;
-
-    //assign data_in = {1'b0, coder_data_out, 4'd0};//ready_tx ? streaming_sink_data : 13'd0;
-
+reg [12:0] adc_data;
+reg        flag;
     always @ (posedge clk)
     begin
+        led[1] <= streaming_sink_data;
         if (key[0]) begin        
-            led[0] <= 1'b1;
-            led[1] <= 1'b1;
+            led[0] <= 1'b1;            
             irq <= 1'b1;        
         end else
         if (slave_chipselect) begin
             if(slave_read) begin
-                irq <= 1'b0;
-            end else 
-            if (slave_write) begin
-                case(slave_address)
-                    8'h04: irq <= 1'b1;
+                case (slave_address)
+                    memory_data : 
+                    begin
+                        slave_readdata <= streaming_sink_data;
+                        irq <= 0;
+                        flag = 0;
+                    end                    
                 endcase
-            end
+            end            
         end else
         if (key[1]) begin
             led[0] <= 1'b0;
             led[1] <= 1'b0;
             irq <= 1'b0;
         end
-        led <= streaming_sink_data;
     end
 
 
