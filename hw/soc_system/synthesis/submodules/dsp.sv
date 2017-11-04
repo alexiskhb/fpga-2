@@ -32,6 +32,38 @@ module dsp (
         input wire         [1:0]   key
     );
 
+    // wire            [7:0]           coder_data_out;
+    // wire                            coder_ready;
+    // wire signed     [31:0]          fir_sink_data;
+    // wire                            fir_sink_valid;
+
+    // wire            [7:0]           data_fifo_tx;
+    // wire                            rden_fifo_tx;
+    // wire                            wren_fifo_tx;
+    // wire            [7:0]           data_tx;
+    // wire            [7:0]           size_fifo_tx;
+    // wire                            ready_tx;
+    // wire                            start_tx;
+
+    // wire            [7:0]           data_fifo_rx;
+    // wire                            rden_fifo_rx;
+    // wire                            wren_fifo_rx;
+    // wire            [7:0]           data_rx;
+    // wire            [7:0]           size_fifo_rx;
+    // wire            [7:0]           interrupt_id;
+    // wire                            navig_timer_start;
+    // wire signed     [31:0]          test;
+    // wire signed     [12:0]          data_in;
+
+    // wire            [31:0]          guard_interval;
+    // wire            [31:0]          rx_threshold;
+    // wire            [31:0]          comp_threshold;
+    // wire            [31:0]          mem_addr;
+    // wire            [31:0]          end_address;
+    // wire                            data_ready;
+
+    //assign data_in = {1'b0, coder_data_out, 4'd0};//ready_tx ? streaming_sink_data : 13'd0;
+
 localparam memory_data = 8'h04;
 
 reg [12:0] adc_data;

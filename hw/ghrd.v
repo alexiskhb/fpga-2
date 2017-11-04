@@ -237,9 +237,9 @@ module ghrd(
     .adc_sck                               (ADC_SCK),                  //                               .sck
     .adc_sdi                               (ADC_SDI),                   //                               .sdi
     .adc_sdo                               (ADC_SDO),                   //                               .sdo
-    .dac_din                               (GPIO_1[15]),                //                               dac.din
-    .dac_clk                               (GPIO_1[11]),                //                               .clk
-    .dac_sync                              (GPIO_1[13]),                //                               .sync
+    //.dac_din                               (GPIO_1[15]),                //                               dac.din
+    //.dac_clk                               (GPIO_1[11]),                //                               .clk
+    //.dac_sync                              (GPIO_1[13]),                //                               .sync
     .ports_led                             (LED),
     .ports_gpio                            (GPIO_1[7:0]),
     .ports_key (key_dt)

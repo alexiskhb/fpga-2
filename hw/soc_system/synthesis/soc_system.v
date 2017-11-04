@@ -9,9 +9,6 @@ module soc_system (
 		output wire        adc_sdi,                               //                          .sdi
 		input  wire        adc_sdo,                               //                          .sdo
 		input  wire        clk_clk,                               //                       clk.clk
-		output wire        dac_din,                               //                       dac.din
-		output wire        dac_clk,                               //                          .clk
-		output wire        dac_sync,                              //                          .sync
 		input  wire        hps_0_f2h_cold_reset_req_reset_n,      //  hps_0_f2h_cold_reset_req.reset_n
 		input  wire        hps_0_f2h_debug_reset_req_reset_n,     // hps_0_f2h_debug_reset_req.reset_n
 		input  wire [27:0] hps_0_f2h_stm_hw_events_stm_hwevents,  //   hps_0_f2h_stm_hw_events.stm_hwevents
@@ -89,11 +86,8 @@ module soc_system (
 
 	wire          adc_avalon_streaming_source_valid;                         // adc:streaming_source_valid -> dsp:streaming_sink_valid
 	wire   [12:0] adc_avalon_streaming_source_data;                          // adc:streaming_source_data -> dsp:streaming_sink_data
-	wire          dsp_avalon_streaming_source_valid;                         // dsp:streaming_source_valid -> dac_ad7303_0:streaming_sink_valid
-	wire    [7:0] dsp_avalon_streaming_source_data;                          // dsp:streaming_source_data -> dac_ad7303_0:streaming_sink_data
-	wire          pll_0_outclk0_clk;                                         // pll_0:outclk_0 -> dac_ad7303_0:dac_clk
 	wire          pll_0_outclk1_clk;                                         // pll_0:outclk_1 -> adc:adc_clk
-	wire          pll_0_outclk2_clk;                                         // pll_0:outclk_2 -> [adc:slave_clk, dac_ad7303_0:clk, dsp:clk, fpga_only_master:clk_clk, hps_0:f2h_axi_clk, hps_0:f2h_sdram0_clk, hps_0:h2f_axi_clk, hps_0:h2f_lw_axi_clk, hps_only_master:clk_clk, intr_capturer_0:clk, irq_mapper_002:clk, jtag_uart:clk, mm_interconnect_0:pll_0_outclk2_clk, mm_interconnect_1:pll_0_outclk2_clk, mm_interconnect_2:pll_0_outclk2_clk, onchip_memory2_0:clk, rst_controller:clk, rst_controller_001:clk, sysid_qsys:clock]
+	wire          pll_0_outclk2_clk;                                         // pll_0:outclk_2 -> [adc:slave_clk, dsp:clk, fpga_only_master:clk_clk, hps_0:f2h_axi_clk, hps_0:f2h_sdram0_clk, hps_0:h2f_axi_clk, hps_0:h2f_lw_axi_clk, hps_only_master:clk_clk, intr_capturer_0:clk, irq_mapper_002:clk, jtag_uart:clk, mm_interconnect_0:pll_0_outclk2_clk, mm_interconnect_1:pll_0_outclk2_clk, mm_interconnect_2:pll_0_outclk2_clk, onchip_memory2_0:clk, rst_controller:clk, rst_controller_001:clk, sysid_qsys:clock]
 	wire          dsp_avalon_master_waitrequest;                             // mm_interconnect_0:dsp_avalon_master_waitrequest -> dsp:sdram0_waitrequest
 	wire   [31:0] dsp_avalon_master_address;                                 // dsp:sdram0_address -> mm_interconnect_0:dsp_avalon_master_address
 	wire          dsp_avalon_master_write;                                   // dsp:sdram0_write -> mm_interconnect_0:dsp_avalon_master_write
@@ -264,7 +258,7 @@ module soc_system (
 	wire   [31:0] hps_0_f2h_irq1_irq;                                        // irq_mapper_001:sender_irq -> hps_0:f2h_irq_p1
 	wire   [31:0] intr_capturer_0_interrupt_receiver_irq;                    // irq_mapper_002:sender_irq -> intr_capturer_0:interrupt_in
 	wire          irq_mapper_receiver1_irq;                                  // jtag_uart:av_irq -> [irq_mapper:receiver1_irq, irq_mapper_002:receiver0_irq]
-	wire          rst_controller_reset_out_reset;                            // rst_controller:reset_out -> [adc:slave_reset, dac_ad7303_0:reset, dsp:reset, intr_capturer_0:rst_n, irq_mapper_002:reset, jtag_uart:rst_n, mm_interconnect_0:dsp_reset_sink_reset_bridge_in_reset_reset, mm_interconnect_1:fpga_only_master_clk_reset_reset_bridge_in_reset_reset, mm_interconnect_1:onchip_memory2_0_reset1_reset_bridge_in_reset_reset, mm_interconnect_2:hps_only_master_clk_reset_reset_bridge_in_reset_reset, mm_interconnect_2:hps_only_master_master_translator_reset_reset_bridge_in_reset_reset, onchip_memory2_0:reset, rst_translator:in_reset, sysid_qsys:reset_n]
+	wire          rst_controller_reset_out_reset;                            // rst_controller:reset_out -> [adc:slave_reset, dsp:reset, intr_capturer_0:rst_n, irq_mapper_002:reset, jtag_uart:rst_n, mm_interconnect_0:dsp_reset_sink_reset_bridge_in_reset_reset, mm_interconnect_1:fpga_only_master_clk_reset_reset_bridge_in_reset_reset, mm_interconnect_1:onchip_memory2_0_reset1_reset_bridge_in_reset_reset, mm_interconnect_2:hps_only_master_clk_reset_reset_bridge_in_reset_reset, mm_interconnect_2:hps_only_master_master_translator_reset_reset_bridge_in_reset_reset, onchip_memory2_0:reset, rst_translator:in_reset, sysid_qsys:reset_n]
 	wire          rst_controller_reset_out_reset_req;                        // rst_controller:reset_req -> [onchip_memory2_0:reset_req, rst_translator:reset_req_in]
 	wire          rst_controller_001_reset_out_reset;                        // rst_controller_001:reset_out -> [mm_interconnect_0:hps_0_f2h_sdram0_data_translator_reset_reset_bridge_in_reset_reset, mm_interconnect_1:hps_0_h2f_axi_master_agent_clk_reset_reset_bridge_in_reset_reset, mm_interconnect_2:hps_0_f2h_axi_slave_agent_reset_sink_reset_bridge_in_reset_reset]
 
@@ -284,22 +278,11 @@ module soc_system (
 		.adc_clk                (pll_0_outclk1_clk)                       //          clock_sink_adc.clk
 	);
 
-	dac dac_ad7303_0 (
-		.clk                  (pll_0_outclk2_clk),                 //                 clock.clk
-		.reset                (rst_controller_reset_out_reset),    //                 reset.reset
-		.streaming_sink_data  (dsp_avalon_streaming_source_data),  // avalon_streaming_sink.data
-		.streaming_sink_valid (dsp_avalon_streaming_source_valid), //                      .valid
-		.DIN                  (dac_din),                           //           conduit_end.din
-		.SCLK                 (dac_clk),                           //                      .clk
-		.SYNC                 (dac_sync),                          //                      .sync
-		.dac_clk              (pll_0_outclk0_clk)                  //               dac_clk.clk
-	);
-
 	dsp dsp (
 		.streaming_sink_data    (adc_avalon_streaming_source_data),              //   avalon_streaming_sink.data
 		.streaming_sink_valid   (adc_avalon_streaming_source_valid),             //                        .valid
-		.streaming_source_data  (dsp_avalon_streaming_source_data),              // avalon_streaming_source.data
-		.streaming_source_valid (dsp_avalon_streaming_source_valid),             //                        .valid
+		.streaming_source_data  (),                                              // avalon_streaming_source.data
+		.streaming_source_valid (),                                              //                        .valid
 		.clk                    (pll_0_outclk2_clk),                             //              clock_sink.clk
 		.reset                  (rst_controller_reset_out_reset),                //              reset_sink.reset
 		.slave_address          (mm_interconnect_1_dsp_avalon_slave_address),    //            avalon_slave.address
@@ -592,7 +575,7 @@ module soc_system (
 	soc_system_pll_0 pll_0 (
 		.refclk   (clk_clk),           //  refclk.clk
 		.rst      (~reset_reset_n),    //   reset.reset
-		.outclk_0 (pll_0_outclk0_clk), // outclk0.clk
+		.outclk_0 (),                  // outclk0.clk
 		.outclk_1 (pll_0_outclk1_clk), // outclk1.clk
 		.outclk_2 (pll_0_outclk2_clk), // outclk2.clk
 		.locked   ()                   // (terminated)

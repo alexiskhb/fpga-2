@@ -4,9 +4,6 @@
 		.adc_sdi                               (<connected-to-adc_sdi>),                               //                          .sdi
 		.adc_sdo                               (<connected-to-adc_sdo>),                               //                          .sdo
 		.clk_clk                               (<connected-to-clk_clk>),                               //                       clk.clk
-		.dac_din                               (<connected-to-dac_din>),                               //                       dac.din
-		.dac_clk                               (<connected-to-dac_clk>),                               //                          .clk
-		.dac_sync                              (<connected-to-dac_sync>),                              //                          .sync
 		.hps_0_f2h_cold_reset_req_reset_n      (<connected-to-hps_0_f2h_cold_reset_req_reset_n>),      //  hps_0_f2h_cold_reset_req.reset_n
 		.hps_0_f2h_debug_reset_req_reset_n     (<connected-to-hps_0_f2h_debug_reset_req_reset_n>),     // hps_0_f2h_debug_reset_req.reset_n
 		.hps_0_f2h_stm_hw_events_stm_hwevents  (<connected-to-hps_0_f2h_stm_hw_events_stm_hwevents>),  //   hps_0_f2h_stm_hw_events.stm_hwevents

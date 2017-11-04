@@ -5,9 +5,6 @@
 			adc_sdi                               : out   std_logic;                                        -- sdi
 			adc_sdo                               : in    std_logic                     := 'X';             -- sdo
 			clk_clk                               : in    std_logic                     := 'X';             -- clk
-			dac_din                               : out   std_logic;                                        -- din
-			dac_clk                               : out   std_logic;                                        -- clk
-			dac_sync                              : out   std_logic;                                        -- sync
 			hps_0_f2h_cold_reset_req_reset_n      : in    std_logic                     := 'X';             -- reset_n
 			hps_0_f2h_debug_reset_req_reset_n     : in    std_logic                     := 'X';             -- reset_n
 			hps_0_f2h_stm_hw_events_stm_hwevents  : in    std_logic_vector(27 downto 0) := (others => 'X'); -- stm_hwevents
@@ -91,9 +88,6 @@
 			adc_sdi                               => CONNECTED_TO_adc_sdi,                               --                          .sdi
 			adc_sdo                               => CONNECTED_TO_adc_sdo,                               --                          .sdo
 			clk_clk                               => CONNECTED_TO_clk_clk,                               --                       clk.clk
-			dac_din                               => CONNECTED_TO_dac_din,                               --                       dac.din
-			dac_clk                               => CONNECTED_TO_dac_clk,                               --                          .clk
-			dac_sync                              => CONNECTED_TO_dac_sync,                              --                          .sync
 			hps_0_f2h_cold_reset_req_reset_n      => CONNECTED_TO_hps_0_f2h_cold_reset_req_reset_n,      --  hps_0_f2h_cold_reset_req.reset_n
 			hps_0_f2h_debug_reset_req_reset_n     => CONNECTED_TO_hps_0_f2h_debug_reset_req_reset_n,     -- hps_0_f2h_debug_reset_req.reset_n
 			hps_0_f2h_stm_hw_events_stm_hwevents  => CONNECTED_TO_hps_0_f2h_stm_hw_events_stm_hwevents,  --   hps_0_f2h_stm_hw_events.stm_hwevents
