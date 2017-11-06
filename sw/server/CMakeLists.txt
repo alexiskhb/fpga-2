@@ -25,7 +25,8 @@ ADD_CUSTOM_TARGET(release_arm
 if (CMAKE_BUILD_TYPE MATCHES Release)
 	# specify arm gcc here
 	# use the same gcc to build fastcgipp lib
-	set(triple /usr/bin/gcc-linaro-5.4.1-hf/bin/arm-linux-gnueabihf-)
+    set(triple /usr/bin/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-)
+    set(TARGET_FILES main.cpp)
 	set(TARGET_FILES main.cpp)
 	set(CMAKE_C_LINK_EXECUTABLE ${triple}ld)
 	set(CMAKE_CXX_COMPILER ${triple}g++)
@@ -38,7 +39,7 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
 	link_directories(lib)
 endif()
 
-set(TARGET_LIBS fastcgipp pthread fftw3)
+set(TARGET_LIBS fastcgipp pthread)
 add_executable(${PROJECT_NAME} ${TARGET_FILES})
 target_link_libraries(${PROJECT_NAME} ${TARGET_LIBS})
 

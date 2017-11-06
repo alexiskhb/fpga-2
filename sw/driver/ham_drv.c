@@ -1,9 +1,8 @@
-#include <asm/uaccess.h>
 #include <linux/cdev.h>
-#include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/fs.h>
 #include <asm/uaccess.h>
@@ -12,9 +11,10 @@
 #define DEVICE_NAME                 "ham"
 #define UINPUT_BASE                 0xff200000
 #define UINPUT_SIZE                 0x00070000
+#define INTERRUPT_NUM               77
 
 #define MODULE_OFFSET               (ham_drv_mem + 0x00050000)
-#define SET_LEDS_OFFSET             (MODULE_OFFSET + 1 * sizeof(u32))
+#define GET_ADC_OFFSET              (MODULE_OFFSET + 1 * sizeof(u32))
 
 static void *ham_drv_mem = NULL;
 static struct class *ham_drv_class  = NULL;
@@ -22,36 +22,13 @@ static struct device *ham_drv_device = NULL;
 
 static int major_number;
 
-static ssize_t ham_drv_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
-    if (len < 2 || len > 4) {
-        printk(KERN_ALERT "ham_drv: wrong length\n");
-        return -EINVAL;
-    }
-    char message[4];
-    if (copy_from_user(message, buffer, len - 1)) {
-        printk(KERN_ALERT "ham_drv: copy error\n");
-        return -EINVAL;
-    }
-    long number;
-    int ret;
-    if ((ret = kstrtol(message, 0, &number))) {
-        return ret;
-    }
-    if (number < 0 || number > 255) {
-        printk(KERN_ALERT "ham_drv: wrong command\n");
-        return -EINVAL;
-    }
-    iowrite32(number, SET_LEDS_OFFSET);
-    printk(KERN_INFO "ham_drv: recived %ld\n", number);
-    return len;
-}
+static int adc_value = 0;
 
 static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     switch (cmd) {
-        case IOCTL_SET_LEDS:
-            iowrite32(arg, SET_LEDS_OFFSET);
-            return 0;
+        case IOCTL_GET_ADC_VALUE:
+            return put_user(adc_value, (int __user *)(arg));
         default:
             printk(KERN_ALERT "ham_drv: wrong ioctl command %d\n", cmd);
             return -ENOIOCTLCMD;
@@ -60,10 +37,20 @@ static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long ar
 
 static const struct file_operations ham_drv_fops = {
     .owner = THIS_MODULE,
-    .write = ham_drv_write,
     .unlocked_ioctl = ham_drv_ioctl,
     .llseek = no_llseek,
 };
+
+static irqreturn_t ham_drv_interrupt(int irq, void *dev_id)
+{
+    printk(KERN_INFO "ham_drv: irq %d\n", irq);
+    if (irq != INTERRUPT_NUM) {
+        return IRQ_NONE;
+    }
+    adc_value = ioread32(GET_ADC_OFFSET);
+    printk(KERN_INFO "ham_drv: adc %ld\n", adc_value);
+    return IRQ_HANDLED;
+}
 
 static int __init ham_drv_init(void)
 {
@@ -99,12 +86,20 @@ static int __init ham_drv_init(void)
     if (ham_drv_mem == NULL) {
         ret = -EFAULT;
         goto fail_ioremap;
-    }
+        }
 
-    iowrite32(0xff, SET_LEDS_OFFSET);
+    ret = request_irq(INTERRUPT_NUM, ham_drv_interrupt, 0, "ham_drv", NULL); 
+    if (ret != 0) {
+        printk(KERN_ALERT "ham_drv: failed to request irq %d\n", INTERRUPT_NUM);
+        goto fail_request_irq;
+    }
+    printk(KERN_INFO "ham_drv: request irq %d\n", INTERRUPT_NUM);
+
     printk(KERN_INFO "ham_drv: successfully initialized\n");
     return 0;
 
+fail_request_irq:
+    iounmap(ham_drv_mem);
 fail_ioremap:
     release_mem_region(UINPUT_BASE, UINPUT_SIZE);
 fail_request_mem_region:
@@ -121,7 +116,8 @@ fail_register_chrdev:
 
 static void __exit ham_drv_exit(void)
 {
-    iowrite32(0x00, SET_LEDS_OFFSET);
+    free_irq(INTERRUPT_NUM, 0);
+    iounmap(ham_drv_mem);
     release_mem_region(UINPUT_BASE, UINPUT_SIZE);
     device_destroy(ham_drv_class, MKDEV(major_number, 0));
     class_unregister(ham_drv_class);

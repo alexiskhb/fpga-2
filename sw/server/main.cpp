@@ -1,15 +1,27 @@
 #include <iostream>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <vector>
-#include <random>
+#include <fcntl.h>
+#include <string>
 
 #include "../driver/ioctl_commands.h"
 
 #include <fastcgi++/request.hpp>
 #include <fastcgi++/manager.hpp>
 
-std::random_device rd;
+using namespace std;
+
+int fd;
+
+bool init_drv()
+{
+    fd = open("/dev/ham", O_RDWR);
+    if (fd < 0) {
+        cerr << "failed open ham device" << endl;
+        return false;
+    }
+    return true;
+}
 
 class Modem: public Fastcgipp::Request<wchar_t>
 {
@@ -22,23 +34,20 @@ private:
 
     bool response()
     {
+        int adc_value = 0;
+        ioctl(fd, IOCTL_GET_ADC_VALUE, &adc_value);
         using Fastcgipp::Encoding;
-
         out <<  L"Content-Type: text/html\n\n";
-        out <<  std::to_wstring(rd());
-        // out <<  L"<form method=\"post\"> <input type=\"text\" name=\"abc\"> <input type=\"submit\"></form>";
-        // for (const auto& post: environment().posts) {
-            // out << L"<b>" << Encoding::HTML << post.first << Encoding::NONE
-                // << L":</b>" << Encoding::HTML << post.second
-                // << Encoding::NONE << L"<br/>";
-            // ioctl();
-        // }
+        out <<  std::to_wstring(adc_value);
         return true;
     }
 };
 
 int main(int argc, char** argv)
 {
+    if (!init_drv()) {
+        return 1;
+    }
     Fastcgipp::Manager<Modem> manager;
     manager.setupSignals();
     manager.listen("127.0.0.1", argc > 1 ? argv[1] : "8000");

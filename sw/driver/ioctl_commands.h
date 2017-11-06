@@ -1,1 +1,1 @@
-#define IOCTL_SET_LEDS              20
+#define IOCTL_GET_ADC_VALUE 21 
