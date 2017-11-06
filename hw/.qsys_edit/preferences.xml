@@ -9,6 +9,7 @@
    <inputclock preferredWidth="175" />
   </columns>
  </systemtable>
- <library expandedCategories="Project/Terasic Qsys Component,Project,Library" />
- <window width="1777" height="1000" x="107" y="66" />
+ <library
+   expandedCategories="Project/System,Library,Project,Project/Terasic Qsys Component" />
+ <window width="1523" height="1000" x="107" y="66" />
 </preferences>
