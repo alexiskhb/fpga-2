@@ -42,29 +42,36 @@ reg        flag;
         pins[1] <= 1'b1;
     end
 
-    always @ (posedge clk)
+    always @ (posedge clk  or posedge reset)
     begin
-        led[1] <= streaming_sink_data;
-        if (key[0]) begin        
-            led[0] <= 1'b1;            
-            irq <= 1'b1;        
-        end else
-        if (slave_chipselect) begin
-            if(slave_read) begin
-                case (slave_address)
-                    memory_data : 
-                    begin
-                        slave_readdata <= streaming_sink_data;
-                        irq <= 0;
-                        flag = 0;
-                    end                    
-                endcase
-            end            
-        end else
-        if (key[1]) begin
-            led[0] <= 1'b0;
-            led[1] <= 1'b0;
+        if (reset) begin
             irq <= 1'b0;
+            led <= 0;
+            flag <= 0;            
+        end else begin
+
+            led[1] <= streaming_sink_data;
+            if (key[0]) begin        
+                led[0] <= 1'b1;            
+                irq <= 1'b1;        
+            end else
+            if (slave_chipselect) begin
+                if(slave_read) begin
+                    case (slave_address)
+                        memory_data : 
+                        begin
+                            slave_readdata <= streaming_sink_data;
+                            irq <= 0;
+                            flag = 0;
+                        end                    
+                    endcase
+                end            
+            end else
+            if (key[1]) begin
+                led[0] <= 1'b0;
+                led[1] <= 1'b0;
+                irq <= 1'b0;
+            end
         end
     end
 
