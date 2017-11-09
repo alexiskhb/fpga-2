@@ -21,11 +21,16 @@ hw/*.sof
 hw/*.sopc_builder
 hw/*.summary
 hw/*.txt
-hw/*.jic
-hw/*.map
 hw/*~
 hw/*example*
 hw/*sopc_*
+hw/*.csv
+hw/*.jic
+hw/*.sof
+hw/*.sopcinfo
+hw/*.summary
+hw/.fr-pvvWpM/
+hw/.qsys_edit/
 hw/db/
 hw/incremental_db/
 hw/simulation/
@@ -33,7 +38,8 @@ hw/timing/
 hw/testbench/
 hw/*_sim/
 hw/*.stp
-hw/hps_isw_handoff/build
-hw/hps_isw_handoff/build.bckp
+hw/hps_isw_handoff/
+hw/soc_system/
+hw/stamp/
 
 sw/server/build
