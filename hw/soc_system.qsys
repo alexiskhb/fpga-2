@@ -33,6 +33,14 @@
          type = "int";
       }
    }
+   element dma_0
+   {
+      datum _sortIndex
+      {
+         value = "11";
+         type = "int";
+      }
+   }
    element dsp
    {
       datum _sortIndex
@@ -229,6 +237,14 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -309,6 +325,27 @@
   <parameter name="clockFrequencyKnown" value="true" />
   <parameter name="inputClockFrequency" value="0" />
   <parameter name="resetSynchronousEdges" value="NONE" />
+ </module>
+ <module name="dma_0" kind="altera_avalon_dma" version="17.0" enabled="1">
+  <parameter name="allowByteTransactions" value="true" />
+  <parameter name="allowDoubleWordTransactions" value="true" />
+  <parameter name="allowHalfWordTransactions" value="true" />
+  <parameter name="allowQuadWordTransactions" value="true" />
+  <parameter name="allowWordTransactions" value="true" />
+  <parameter name="avalonSpec" value="2.0" />
+  <parameter name="bigEndian" value="false" />
+  <parameter name="burstEnable" value="false" />
+  <parameter name="fifoDepth" value="32" />
+  <parameter name="maxBurstSize" value="32" />
+  <parameter name="minimumDmaTransactionRegisterWidth" value="32" />
+  <parameter name="readAddressMap"><![CDATA[<address-map><slave name='dsp.avalon_slave' start='0x50000' end='0x50400' /></address-map>]]></parameter>
+  <parameter name="readSlaveAddressWidthMax" value="19" />
+  <parameter name="readSlaveDataWidthMax" value="32" />
+  <parameter name="softresetEnable" value="true" />
+  <parameter name="useRegistersForFIFO" value="true" />
+  <parameter name="writeAddressMap"><![CDATA[<address-map><slave name='dsp.avalon_slave' start='0x50000' end='0x50400' /></address-map>]]></parameter>
+  <parameter name="writeSlaveAddressWidthMax" value="19" />
+  <parameter name="writeSlaveDataWidthMax" value="32" />
  </module>
  <module name="dsp" kind="dsp" version="1.0" enabled="1" />
  <module
@@ -1178,6 +1215,15 @@
    kind="avalon"
    version="17.0"
    start="hps_0.h2f_lw_axi_master"
+   end="dma_0.control_port_slave">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="17.0"
+   start="hps_0.h2f_lw_axi_master"
    end="sysid_qsys.control_slave">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x00010000" />
@@ -1238,10 +1284,29 @@
   <parameter name="defaultConnection" value="false" />
  </connection>
  <connection
+   kind="avalon"
+   version="17.0"
+   start="dma_0.read_master"
+   end="dsp.avalon_slave">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x00050000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="17.0"
+   start="dma_0.write_master"
+   end="dsp.avalon_slave">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x00050000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
    kind="avalon_streaming"
    version="17.0"
    start="adc.avalon_streaming_source"
    end="dsp.avalon_streaming_sink" />
+ <connection kind="clock" version="17.0" start="clk_0.clk" end="dma_0.clk" />
  <connection kind="clock" version="17.0" start="clk_0.clk" end="pll_0.refclk" />
  <connection
    kind="clock"
@@ -1321,6 +1386,13 @@
  <connection
    kind="interrupt"
    version="17.0"
+   start="hps_0.f2h_irq0"
+   end="dma_0.irq">
+  <parameter name="irqNumber" value="0" />
+ </connection>
+ <connection
+   kind="interrupt"
+   version="17.0"
    start="intr_capturer_0.interrupt_receiver"
    end="jtag_uart.irq">
   <parameter name="irqNumber" value="2" />
@@ -1346,6 +1418,7 @@
    start="clk_0.clk_reset"
    end="jtag_uart.reset" />
  <connection kind="reset" version="17.0" start="clk_0.clk_reset" end="pll_0.reset" />
+ <connection kind="reset" version="17.0" start="clk_0.clk_reset" end="dma_0.reset" />
  <connection
    kind="reset"
    version="17.0"
