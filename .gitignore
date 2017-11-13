@@ -21,6 +21,7 @@ hw/*.sof
 hw/*.sopc_builder
 hw/*.summary
 hw/*.txt
+hw/*.dts
 hw/*~
 hw/*example*
 hw/*sopc_*
