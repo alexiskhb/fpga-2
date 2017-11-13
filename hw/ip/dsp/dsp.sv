@@ -29,7 +29,9 @@ module dsp (
         output reg         [7:0]   led,                    //                        .led
         output reg         [7:0]   pins,                   //                        .led
         output reg                 irq,                     //                        .irq
-        input wire         [1:0]   key
+        input wire         [1:0]   key,
+        output reg                 streaming_source_startofpacket,
+        output reg                 streaming_source_endofpacket
     );
 
 localparam memory_data = 8'h04;
