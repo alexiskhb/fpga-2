@@ -31,7 +31,14 @@ module dsp (
         output reg                 irq,                     //                        .irq
         input wire         [1:0]   key,
         output reg                 streaming_source_startofpacket,
-        output reg                 streaming_source_endofpacket
+        output reg                 streaming_source_endofpacket,
+
+        input wire         [5:0]   slave_1_address,
+        input wire                 slave_1_chipselect,
+        input wire                 slave_1_read,
+        output reg         [16:0]  slave_1_readdata,
+        output reg                 slave_1_waitrequest
+
     );
 
 //localparam memory_data = 8'h04;
@@ -46,10 +53,8 @@ module dsp (
 
     always @ (posedge clk)
     begin
-        streaming_source_startofpacket <= 1'b1;
-        streaming_source_data <= 1'b1;        
-        streaming_source_endofpacket <= 1'b1;
-        streaming_source_valid <= 1'b1;
+        slave_1_readdata <= 16'd65536;
+
         // if (reset) begin
         //     irq <= 1'b0;
         //     led <= 0;
