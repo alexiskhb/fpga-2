@@ -41,50 +41,9 @@ module dsp (
 
     );
 
-//localparam memory_data = 8'h04;
-
-// reg [12:0] adc_data;
-// reg        flag;
-
-    // always @ (posedge clk)
-    // begin
-    //     pins[1] <= 1'b1;
-    // end
-
     always @ (posedge clk)
     begin
-        slave_1_readdata <= 16'd65536;
-
-        // if (reset) begin
-        //     irq <= 1'b0;
-        //     led <= 0;
-        //     flag <= 0;            
-        // end else begin
-
-        //     led[1] <= streaming_sink_data;
-        //     if (key[0]) begin        
-        //         led[0] <= 1'b1;            
-        //         irq <= 1'b1;        
-        //     end else
-        //     if (slave_chipselect) begin
-        //         if(slave_read) begin
-        //             case (slave_address)
-        //                 memory_data : 
-        //                 begin
-        //                     slave_readdata <= streaming_sink_data;
-        //                     irq <= 0;
-        //                     flag = 0;
-        //                 end                    
-        //             endcase
-        //         end            
-        //     end else
-        //     if (key[1]) begin
-        //         led[0] <= 1'b0;
-        //         led[1] <= 1'b0;
-        //         irq <= 1'b0;
-        //     end
-        // end
-
+        slave_1_readdata <= 16'd43695;
     end
 
 
