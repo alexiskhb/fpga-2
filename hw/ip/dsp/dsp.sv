@@ -12,7 +12,7 @@
 module dsp (
         input  wire signed [12:0]  streaming_sink_data,    //   avalon_streaming_sink.data
         input  wire                streaming_sink_valid,   //                        .valid
-        output reg         [7:0]   streaming_source_data,  // avalon_streaming_source.data
+        output reg         [16:0]   streaming_source_data,  // avalon_streaming_source.data
         output reg                 streaming_source_valid, //                        .valid
         input  wire                clk,                    //              clock_sink.clk
         input  wire                reset,                  //              reset_sink.reset
@@ -41,9 +41,20 @@ module dsp (
 
     );
 
+reg flag;
+
     always @ (posedge clk)
     begin
-        slave_1_readdata <= 16'd43695;
+        if (flag == 0) begin
+            streaming_source_startofpacket <= 1'b1;
+            streaming_source_data <= 16'd43696;
+            streaming_source_valid <= 1'b1;
+            flag <= 1;                
+        end else if (flag == 1) begin
+            streaming_source_data <= 16'd1489;
+            streaming_source_valid <= 1'b1;
+            streaming_source_endofpacket <= 1'b1;
+        end
     end
 
 
