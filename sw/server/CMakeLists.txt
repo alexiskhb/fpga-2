@@ -10,7 +10,7 @@ set(BIN ${PROJECT_BINARY_DIR}/bin)
 
 include_directories(/usr/local/include)
 
-set(TARGET_FILES main.cpp)
+set(TARGET_FILES main.cpp processing.cpp)
 
 ADD_CUSTOM_TARGET(debug_x64
   				  COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug ${CMAKE_SOURCE_DIR}
@@ -27,7 +27,6 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
 	# use the same gcc to build fastcgipp lib
     set(triple /usr/bin/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-)
     set(TARGET_FILES main.cpp)
-	set(TARGET_FILES main.cpp)
 	set(CMAKE_C_LINK_EXECUTABLE ${triple}ld)
 	set(CMAKE_CXX_COMPILER ${triple}g++)
 	set(CMAKE_CC_COMPILER ${triple}gcc)
@@ -35,11 +34,11 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
 endif()
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
-	set(TARGET_FILES main.cpp)
+	set(TARGET_FILES main.cpp processing.cpp)
 	link_directories(lib)
 endif()
 
-set(TARGET_LIBS fastcgipp pthread)
+set(TARGET_LIBS fastcgipp pthread fftw3)
 add_executable(${PROJECT_NAME} ${TARGET_FILES})
 target_link_libraries(${PROJECT_NAME} ${TARGET_LIBS})
 

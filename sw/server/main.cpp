@@ -5,38 +5,69 @@
 #include <string>
 #include <random>
 
+#include "processing.h"
 #include "../driver/ioctl_commands.h"
 
 #include <fastcgi++/request.hpp>
 #include <fastcgi++/manager.hpp>
 
-using namespace std;
+#define DEVICE_NAME "/dev/ham"
 
-int fd;
-
-bool init_drv()
-{
-    fd = open("/dev/ham", O_RDWR);
-    if (fd < 0) {
-        cerr << "failed open ham device" << endl;
-        return false;
-    }
-    return true;
-}
-
-class Modem: public Fastcgipp::Request<wchar_t>
+class Driver 
 {
 public:
-    Modem() : Fastcgipp::Request<wchar_t>(5*1024) 
-    {}
-private:
-    random_device rd;
-    int data[4];
-    enum class Event {
-    };
+    void send(int cmd, int* data) 
+    {
+        ioctl(fd, cmd, reinterpret_cast<char*>(data));
+    }
 
+    void recv(int cmd, std::vector<unsigned short>& out_data) //8192 
+    {
+        int k = 8192/4;
+        out_data.resize(k*4);
+        for (int i = 0; i < k; i++) {
+            out_data[0*k + i] = rand();
+            out_data[1*k + i] = rand();
+            out_data[2*k + i] = rand();
+            out_data[3*k + i] = rand();
+        }
+    }
+
+    bool is_ready() 
+    {
+        return true;
+    }
+
+    bool init(const char* name) 
+    {
+        fd = open(name, O_RDWR);
+        if (fd < 0) {
+            std::cerr << "failed open ham device" << std::endl;
+            return false;
+        }
+        return true;
+    }
+private:
+    int fd;
+};
+
+class WebClientRequest: public Fastcgipp::Request<wchar_t>
+{
+public:
+    WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024) 
+    {
+        // Wrong: new request is created on every request
+        // driver.init(DEVICE_NAME);
+    }
+    
+private:
+    int data[4];
+    Driver driver;
+    
+private:
     bool inProcessor() 
     {
+        using namespace std;
         string s(environment().postBuffer().begin(), environment().postBuffer().end());
         if (s.size() > 0) {
             auto st = s.begin();
@@ -47,8 +78,7 @@ private:
                 }
                 int k = 0;
                 while (l != s.end() && *l != '&') {
-                    k *= 10;
-                    k += *l - '0';
+                    k = 10*k + *l - '0';
                     l++;
                 }
                 st = l;
@@ -56,8 +86,8 @@ private:
                 cout.flush();
                 data[i] = k;
             }
-            ioctl(fd, IOCTL_SEND_4_NUMBERS, reinterpret_cast<char*>(data));
             cout << endl;
+            driver.send(IOCTL_SEND_4_NUMBERS, data);
         }
         return true;
     }
@@ -65,21 +95,24 @@ private:
     bool response()
     {
         int adc_value = 0;
-       // ioctl(fd, IOCTL_GET_ADC_VALUE, &adc_value);
-
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
-        out <<  std::to_wstring(rd()%20);
+        if (driver.is_ready()) {
+            std::vector<unsigned short> data;
+            driver.recv(0, data);
+            unsigned short delays[4];
+            float threshold = 0.14;
+            process_ping_guilbert(data.data(), 4, 1024, delays, threshold);
+            out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3];
+        }
+        out <<  std::to_wstring(0);
         return true;
     }
 };
 
 int main(int argc, char** argv)
 {
-    if (!init_drv()) {
-//        return 1;
-    }
-    Fastcgipp::Manager<Modem> manager;
+    Fastcgipp::Manager<WebClientRequest> manager;
     manager.setupSignals();
     manager.listen("127.0.0.1", argc > 1 ? argv[1] : "8000");
     manager.start();

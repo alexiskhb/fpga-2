@@ -16,8 +16,7 @@ $(document).ready(function() {
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
-            data: "adasdasd",
-            // data: to_byte_str_32(num),
+            data: "",
             success: function (data) {
                 document.getElementById('result2').innerHTML = data;
             }
@@ -47,23 +46,24 @@ $(document).ready(function() {
             url: fastcgiAddress,
             type: "POST",
             data: {
-            "l1" : l1, 
-            "l2" : l2, 
-            "l3" : l3, 
-            "l4" : l4
-        },
+                "l1" : l1, 
+                "l2" : l2, 
+                "l3" : l3, 
+                "l4" : l4
+            },
             success: function (data) {}
         });
     });
 
     function update_contents() {
-        // $.ajax({
-        //     url: fastcgiAddress,
-        //     type: "GET",
-        //     success: function(result) {
-        //         document.getElementById('result').innerHTML = result;
-        //     }
-        // }); 
+        $.ajax({
+            url: fastcgiAddress,
+            type: "POST",
+            success: function(result) {
+                let delays = result.split(';');
+                document.getElementById('result2').innerHTML = delays;
+            }
+        }); 
     }
 
     function start() {
