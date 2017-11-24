@@ -12,7 +12,7 @@
 module dsp (
         input  wire signed [12:0]  streaming_sink_data,    //   avalon_streaming_sink.data
         input  wire                streaming_sink_valid,   //                        .valid
-        output reg         [16:0]   streaming_source_data,  // avalon_streaming_source.data
+        output reg         [15:0]  streaming_source_data,  // avalon_streaming_source.data
         output reg                 streaming_source_valid, //                        .valid
         input  wire                clk,                    //              clock_sink.clk
         input  wire                reset,                  //              reset_sink.reset
@@ -37,23 +37,34 @@ module dsp (
         input wire                 slave_1_chipselect,
         input wire                 slave_1_read,
         output reg         [16:0]  slave_1_readdata,
-        output reg                 slave_1_waitrequest
+        output reg                 slave_1_waitrequest,
+
+        output reg                 master_1_write,
+        output reg         [15:0]  master_1_writedata,
+        output reg                 master_1_waitrequest,
+        output reg         [31:0]  master_1_address
+
 
     );
 
-reg flag;
+localparam memory_data = 8'h04;
+
+reg dma_event;
+reg [1:0] flag;
 
     always @ (posedge clk)
     begin
         if (flag == 0) begin
-            streaming_source_startofpacket <= 1'b1;
-            streaming_source_data <= 16'd43696;
-            streaming_source_valid <= 1'b1;
-            flag <= 1;                
-        end else if (flag == 1) begin
-            streaming_source_data <= 16'd1489;
-            streaming_source_valid <= 1'b1;
-            streaming_source_endofpacket <= 1'b1;
+            master_1_writedata <= 16'd123;
+            //master_1_write <= 1;//?
+            flag <= 1;
+        end else if (flag == 1) begin            
+            master_1_writedata <= 16'd1489;
+            master_1_write <= 1;      
+            flag <= 2;
+        end else if (flag == 2) begin
+            master_1_write <= 0; 
+            //master_1_waitrequest <= 1;
         end
     end
 
