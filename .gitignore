@@ -30,6 +30,7 @@ hw/*.jic
 hw/*.sof
 hw/*.sopcinfo
 hw/*.summary
+hw/*.map
 hw/.fr-pvvWpM/
 hw/.qsys_edit/
 hw/db/
@@ -42,5 +43,6 @@ hw/*.stp
 hw/hps_isw_handoff/
 hw/soc_system/
 hw/stamp/
+hw/software/
 
 sw/server/build

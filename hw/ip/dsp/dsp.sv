@@ -12,7 +12,7 @@
 module dsp (
         input  wire signed [12:0]  streaming_sink_data,    //   avalon_streaming_sink.data
         input  wire                streaming_sink_valid,   //                        .valid
-        output reg         [7:0]   streaming_source_data,  // avalon_streaming_source.data
+        output reg         [16:0]   streaming_source_data,  // avalon_streaming_source.data
         output reg                 streaming_source_valid, //                        .valid
         input  wire                clk,                    //              clock_sink.clk
         input  wire                reset,                  //              reset_sink.reset
@@ -31,49 +31,29 @@ module dsp (
         output reg                 irq,                     //                        .irq
         input wire         [1:0]   key,
         output reg                 streaming_source_startofpacket,
-        output reg                 streaming_source_endofpacket
+        output reg                 streaming_source_endofpacket,
+
+        input wire         [5:0]   slave_1_address,
+        input wire                 slave_1_chipselect,
+        input wire                 slave_1_read,
+        output reg         [16:0]  slave_1_readdata,
+        output reg                 slave_1_waitrequest
+
     );
 
-localparam memory_data = 8'h04;
-
-reg [12:0] adc_data;
-reg        flag;
+reg flag;
 
     always @ (posedge clk)
     begin
-        pins[1] <= 1'b1;
-    end
-
-    always @ (posedge clk  or posedge reset)
-    begin
-        if (reset) begin
-            irq <= 1'b0;
-            led <= 0;
-            flag <= 0;            
-        end else begin
-
-            led[1] <= streaming_sink_data;
-            if (key[0]) begin        
-                led[0] <= 1'b1;            
-                irq <= 1'b1;        
-            end else
-            if (slave_chipselect) begin
-                if(slave_read) begin
-                    case (slave_address)
-                        memory_data : 
-                        begin
-                            slave_readdata <= streaming_sink_data;
-                            irq <= 0;
-                            flag = 0;
-                        end                    
-                    endcase
-                end            
-            end else
-            if (key[1]) begin
-                led[0] <= 1'b0;
-                led[1] <= 1'b0;
-                irq <= 1'b0;
-            end
+        if (flag == 0) begin
+            streaming_source_startofpacket <= 1'b1;
+            streaming_source_data <= 16'd43696;
+            streaming_source_valid <= 1'b1;
+            flag <= 1;                
+        end else if (flag == 1) begin
+            streaming_source_data <= 16'd1489;
+            streaming_source_valid <= 1'b1;
+            streaming_source_endofpacket <= 1'b1;
         end
     end
 
