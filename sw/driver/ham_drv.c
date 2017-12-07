@@ -25,7 +25,7 @@
 #define DMA_LENGTH_REG_OFFSET          (DMA_MODULE_OFFSET + 12)
 #define DMA_CONTROL_REG_OFFSET         (DMA_MODULE_OFFSET + 24)
 
-#define DMA_BUFFER_SIZE 4 
+#define DMA_BUFFER_SIZE 16 
 
 
 static void *ham_drv_mem = NULL;
@@ -76,7 +76,7 @@ static irqreturn_t ham_drv_interrupt(int irq, void *dev_id)
     if (irq != INTERRUPT_NUM) {
         return IRQ_NONE;
     }
-    iowrite32(130, DMA_CONTROL_REG_OFFSET);
+    iowrite32(0x84, DMA_CONTROL_REG_OFFSET);
     ham_drv_dma_print_registers();
     iowrite32(0, DMA_STATUS_REG_OFFSET);
     return IRQ_HANDLED;
@@ -131,7 +131,7 @@ static int __init ham_drv_init(void)
     }
 
     ham_drv_dma_print_registers();
-    iowrite32(146, DMA_CONTROL_REG_OFFSET);
+    iowrite32(0x94, DMA_CONTROL_REG_OFFSET);
 
     ham_drv_dma_print_registers();
     iowrite32(buffer, DMA_WRITEADDRESS_REG_OFFSET);
@@ -139,7 +139,7 @@ static int __init ham_drv_init(void)
     iowrite32(0, DMA_READADDRESS_REG_OFFSET);
 
     ham_drv_dma_print_registers();
-    iowrite32(154, DMA_CONTROL_REG_OFFSET);
+    iowrite32(0x9c, DMA_CONTROL_REG_OFFSET);
 
     ham_drv_dma_print_registers();
     printk(KERN_INFO "ham_drv: successfully initialized\n");

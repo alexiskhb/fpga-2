@@ -30,7 +30,7 @@
 // ============================================================================
 //Date:  Tue Dec  2 09:28:38 2014
 // ============================================================================
-
+ 
 `define ENABLE_HPS
 //`define ENABLE_CLK
 
@@ -242,7 +242,7 @@ module ghrd(
     //.dac_sync                              (GPIO_1[13]),                //                               .sync
     .ports_led                             (LED),
     .ports_gpio                            (GPIO_1[7:0]),
-    .ports_key (key_dt)
+    .ports_key (fpga_debounced_buttons)
          
  );
 

@@ -12,7 +12,7 @@
 module dsp (
         input  wire signed [12:0]  streaming_sink_data,    //   avalon_streaming_sink.data
         input  wire                streaming_sink_valid,   //                        .valid
-        output reg         [15:0]  streaming_source_data,  // avalon_streaming_source.data
+        output reg         [31:0]  streaming_source_data,  // avalon_streaming_source.data
         output reg                 streaming_source_valid, //                        .valid
         input  wire                clk,                    //              clock_sink.clk
         input  wire                reset,                  //              reset_sink.reset
@@ -27,7 +27,7 @@ module dsp (
         output wire        [63:0]  sdram0_writedata,       //                        .writedata
         input  wire                sdram0_waitrequest,     //                        .waitrequest
         output reg         [7:0]   led,                    //                        .led
-        output reg         [7:0]   pins,                   //                        .led
+        output reg         [7:0]   pins,                   //                        .pins
         output reg                 irq,                     //                        .irq
         input wire         [1:0]   key,
         output reg                 streaming_source_startofpacket,
@@ -47,24 +47,38 @@ module dsp (
 
     );
 
-localparam memory_data = 8'h04;
+    localparam memory_data = 8'h04;
 
-reg dma_event;
-reg [1:0] flag;
+    reg dma_event;
+    reg [31:0] flag;
 
-    always @ (posedge clk)
+    reg pre_key;
+    wire start_edge;
+    always @ (posedge clk) pre_key <= key[0];
+    assign start_edge = (~pre_key & key[0])?1'b1:1'b0;
+
+    always @ (posedge clk or posedge reset)
     begin
-        if (flag == 0) begin
-            master_1_writedata <= 16'd123;
-            //master_1_write <= 1;//?
-            flag <= 1;
-        end else if (flag == 1) begin            
-            master_1_writedata <= 16'd1489;
-            master_1_write <= 1;      
-            flag <= 2;
-        end else if (flag == 2) begin
-            master_1_write <= 0; 
-            //master_1_waitrequest <= 1;
+        if(reset) begin
+            flag <= 0;
+            streaming_source_data <= 0;
+            streaming_source_valid <= 0;
+            led <= 8'h55;
+        end else begin
+            led[7] <= 1'b1;
+            led[6] <= 1'b0;
+            if (start_edge == 1'b1 && flag == 0) begin
+                streaming_source_data <= 32'd123;
+                streaming_source_valid <= 1;
+                flag <= 1;
+                led[1] <= ~led[1];
+            end else if (flag == 1) begin            
+                streaming_source_data <= 32'd1489;
+                flag <= 2;
+            end else if (flag == 2) begin
+                streaming_source_valid <= 0;
+                flag = 0;
+            end
         end
     end
 
