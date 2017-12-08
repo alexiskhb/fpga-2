@@ -70,9 +70,7 @@ $(document).ready(function() {
         setInterval(update_contents, 1000);
     }
 
-    $(window).load(function(){
+    $(window).on("load", function(e){
         start();
     });
 });
-
-
