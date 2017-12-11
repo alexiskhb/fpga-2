@@ -25,6 +25,29 @@
 #define DMA_LENGTH_REG_OFFSET          (DMA_MODULE_OFFSET + 12)
 #define DMA_CONTROL_REG_OFFSET         (DMA_MODULE_OFFSET + 24)
 
+#define DMA_CONTROL_REG_BIT_BYTE          (1 << 0)
+#define DMA_CONTROL_REG_BIT_HALFWWORD     (1 << 1)
+#define DMA_CONTROL_REG_BIT_WORD          (1 << 2)
+#define DMA_CONTROL_REG_BIT_GO            (1 << 3)
+#define DMA_CONTROL_REG_BIT_INTERRUPT     (1 << 4)
+#define DMA_CONTROL_REG_BIT_REEN          (1 << 5)
+#define DMA_CONTROL_REG_BIT_WEEN          (1 << 6)
+#define DMA_CONTROL_REG_BIT_LEEN          (1 << 7)
+#define DMA_CONTROL_REG_BIT_RCON          (1 << 8)
+#define DMA_CONTROL_REG_BIT_WCON          (1 << 9)
+#define DMA_CONTROL_REG_BIT_DOUBLEWORD    (1 << 10)
+#define DMA_CONTROL_REG_BIT_QUADWORD      (1 << 11)
+#define DMA_CONTROL_REG_BIT_SOFTWARERESET (1 << 12)
+
+enum DmaRegisters
+{
+    STATUS,
+    READADDRESS,
+    WRITEADDRESS,
+    LENGTH,
+    CONTROL
+};
+
 #define DMA_BUFFER_SIZE 16 
 
 
@@ -37,13 +60,48 @@ static int major_number;
 static int adc_value = 0;
 static void *buffer;
 
+
+static void* ham_drv_dma_get_reg_offset(enum DmaRegisters reg)
+{
+    switch(reg) {
+    case STATUS: {
+        return DMA_STATUS_REG_OFFSET;
+    }
+    case READADDRESS: {
+        return DMA_READADDRESS_REG_OFFSET;
+    }
+    case WRITEADDRESS: {
+        return DMA_WRITEADDRESS_REG_OFFSET;
+    }
+    case LENGTH: {
+        return DMA_LENGTH_REG_OFFSET;
+    }
+    case CONTROL: {
+        return DMA_CONTROL_REG_OFFSET;
+    }
+    default: {
+        return NULL;
+    }
+    }
+}
+
+static unsigned int ham_drv_dma_read_reg(enum DmaRegisters reg)
+{
+    return ioread32(ham_drv_dma_get_reg_offset(reg));
+}
+
+static void ham_drv_dma_write_reg(unsigned int value, enum DmaRegisters reg)
+{
+    return iowrite32(value, ham_drv_dma_get_reg_offset(reg));
+}
+
 static void ham_drv_dma_print_registers(void)
 {
-    printk(KERN_INFO "ham_drv: dma reg status           %u\n", ioread32(DMA_STATUS_REG_OFFSET));
-    printk(KERN_INFO "ham_drv: dma reg readaddress      %X\n", ioread32(DMA_READADDRESS_REG_OFFSET));
-    printk(KERN_INFO "ham_drv: dma reg writeaddress     %X\n", ioread32(DMA_WRITEADDRESS_REG_OFFSET));
-    printk(KERN_INFO "ham_drv: dma reg length           %u\n", ioread32(DMA_LENGTH_REG_OFFSET));
-    printk(KERN_INFO "ham_drv: dma reg control          %u\n", ioread32(DMA_CONTROL_REG_OFFSET));
+    printk(KERN_INFO "ham_drv: dma reg status           %u\n", ham_drv_dma_read_reg(STATUS));
+    printk(KERN_INFO "ham_drv: dma reg readaddress      %X\n", ham_drv_dma_read_reg(READADDRESS));
+    printk(KERN_INFO "ham_drv: dma reg writeaddress     %X\n", ham_drv_dma_read_reg(WRITEADDRESS));
+    printk(KERN_INFO "ham_drv: dma reg length           %u\n", ham_drv_dma_read_reg(LENGTH));
+    printk(KERN_INFO "ham_drv: dma reg control          %u\n", ham_drv_dma_read_reg(CONTROL));
 }
 
 static void ham_drv_dma_print_data(void)
@@ -76,9 +134,9 @@ static irqreturn_t ham_drv_interrupt(int irq, void *dev_id)
     if (irq != INTERRUPT_NUM) {
         return IRQ_NONE;
     }
-    iowrite32(0x84, DMA_CONTROL_REG_OFFSET);
+    ham_drv_dma_write_reg(DMA_CONTROL_REG_BIT_WORD | DMA_CONTROL_REG_BIT_LEEN, CONTROL);
     ham_drv_dma_print_registers();
-    iowrite32(0, DMA_STATUS_REG_OFFSET);
+    ham_drv_dma_write_reg(0, STATUS);
     return IRQ_HANDLED;
 }
 
@@ -131,15 +189,16 @@ static int __init ham_drv_init(void)
     }
 
     ham_drv_dma_print_registers();
-    iowrite32(0x94, DMA_CONTROL_REG_OFFSET);
+    unsigned int control_reg = DMA_CONTROL_REG_BIT_WORD | DMA_CONTROL_REG_BIT_INTERRUPT | DMA_CONTROL_REG_BIT_LEEN;
+    ham_drv_dma_write_reg(control_reg, CONTROL);
 
     ham_drv_dma_print_registers();
-    iowrite32(buffer, DMA_WRITEADDRESS_REG_OFFSET);
-    iowrite32(DMA_BUFFER_SIZE, DMA_LENGTH_REG_OFFSET);
-    iowrite32(0, DMA_READADDRESS_REG_OFFSET);
+    ham_drv_dma_write_reg((unsigned int)buffer, WRITEADDRESS);
+    ham_drv_dma_write_reg(DMA_BUFFER_SIZE, LENGTH);
+    ham_drv_dma_write_reg(0, READADDRESS);
 
     ham_drv_dma_print_registers();
-    iowrite32(0x9c, DMA_CONTROL_REG_OFFSET);
+    ham_drv_dma_write_reg(control_reg | DMA_CONTROL_REG_BIT_GO, CONTROL);
 
     ham_drv_dma_print_registers();
     printk(KERN_INFO "ham_drv: successfully initialized\n");
