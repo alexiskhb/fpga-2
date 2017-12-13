@@ -25,6 +25,14 @@
          type = "String";
       }
    }
+   element adc_fifo
+   {
+      datum _sortIndex
+      {
+         value = "13";
+         type = "int";
+      }
+   }
    element clk_0
    {
       datum _sortIndex
@@ -277,6 +285,54 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -352,6 +408,7 @@
  <interface name="ports" internal="dsp.portio" type="conduit" dir="end" />
  <interface name="reset" internal="clk_0.clk_in_reset" type="reset" dir="end" />
  <module name="adc" kind="adc" version="1.0" enabled="1" />
+ <module name="adc_fifo" kind="adc_fifo" version="1.0" enabled="1" />
  <module name="clk_0" kind="clock_source" version="17.0" enabled="1">
   <parameter name="clockFrequency" value="50000000" />
   <parameter name="clockFrequencyKnown" value="true" />
@@ -370,7 +427,7 @@
   <parameter name="fifoDepth" value="32" />
   <parameter name="maxBurstSize" value="32" />
   <parameter name="minimumDmaTransactionRegisterWidth" value="4" />
-  <parameter name="readAddressMap"><![CDATA[<address-map><slave name='fifo_0.out' start='0x0' end='0x8' /></address-map>]]></parameter>
+  <parameter name="readAddressMap"><![CDATA[<address-map><slave name='adc_fifo.avalon_slave' start='0x0' end='0x8' /></address-map>]]></parameter>
   <parameter name="readSlaveAddressWidthMax" value="3" />
   <parameter name="readSlaveDataWidthMax" value="32" />
   <parameter name="softresetEnable" value="true" />
@@ -1240,6 +1297,15 @@
  <connection
    kind="avalon"
    version="17.0"
+   start="adc_fifo.avalon_master"
+   end="fifo_0.out">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="17.0"
    start="hps_0.h2f_axi_master"
    end="onchip_memory2_0.s1">
   <parameter name="arbitrationPriority" value="1" />
@@ -1340,7 +1406,7 @@
    kind="avalon"
    version="17.0"
    start="dma_0.read_master"
-   end="fifo_0.out">
+   end="adc_fifo.avalon_slave">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x0000" />
   <parameter name="defaultConnection" value="false" />
@@ -1362,7 +1428,7 @@
  <connection
    kind="avalon_streaming"
    version="17.0"
-   start="dsp.avalon_streaming_source"
+   start="adc_fifo.avalon_streaming_source"
    end="fifo_0.in" />
  <connection kind="clock" version="17.0" start="clk_0.clk" end="dma_0.clk" />
  <connection kind="clock" version="17.0" start="clk_0.clk" end="pll_0.refclk" />
@@ -1408,6 +1474,11 @@
    version="17.0"
    start="pll_0.outclk2"
    end="adc.clock_sink" />
+ <connection
+   kind="clock"
+   version="17.0"
+   start="pll_0.outclk2"
+   end="adc_fifo.clock_sink" />
  <connection
    kind="clock"
    version="17.0"
@@ -1503,6 +1574,11 @@
    version="17.0"
    start="clk_0.clk_reset"
    end="adc.reset_sink" />
+ <connection
+   kind="reset"
+   version="17.0"
+   start="clk_0.clk_reset"
+   end="adc_fifo.reset_sink" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
 </system>

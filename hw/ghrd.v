@@ -230,7 +230,7 @@ module ghrd(
 
     .hps_0_f2h_stm_hw_events_stm_hwevents  (stm_hw_events),  								//  hps_0_f2h_stm_hw_events.stm_hwevents
     .hps_0_h2f_reset_reset_n               (hps_fpga_reset_n),   							//  hps_0_h2f_reset.reset_n
-     .hps_0_f2h_warm_reset_req_reset_n      (~hps_warm_reset),      						//  hps_0_f2h_warm_reset_req.reset_n	
+    .hps_0_f2h_warm_reset_req_reset_n      (~hps_warm_reset),      						//  hps_0_f2h_warm_reset_req.reset_n	
     .hps_0_f2h_debug_reset_req_reset_n     (~hps_debug_reset),     						//  hps_0_f2h_debug_reset_req.reset_n  
     .hps_0_f2h_cold_reset_req_reset_n      (~hps_cold_reset),      						//  hps_0_f2h_cold_reset_req.reset_n
     .adc_convst                            (ADC_CONVST),                //                               adc.convst
@@ -242,7 +242,7 @@ module ghrd(
     //.dac_sync                              (GPIO_1[13]),                //                               .sync
     .ports_led                             (LED),
     .ports_gpio                            (GPIO_1[7:0]),
-    .ports_key (fpga_debounced_buttons)
+    .ports_key                             (fpga_debounced_buttons)
          
  );
 
