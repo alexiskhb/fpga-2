@@ -333,6 +333,14 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -1425,6 +1433,11 @@
    version="17.0"
    start="adc.avalon_streaming_source"
    end="dsp.avalon_streaming_sink" />
+ <connection
+   kind="avalon_streaming"
+   version="17.0"
+   start="dsp.avalon_streaming_source"
+   end="adc_fifo.avalon_streaming_sink" />
  <connection
    kind="avalon_streaming"
    version="17.0"

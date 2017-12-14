@@ -57,6 +57,7 @@ module dsp (
     always @ (posedge clk) pre_key <= key[0];
     assign start_edge = (~pre_key & key[0])?1'b1:1'b0;
 
+
     always @ (posedge clk or posedge reset)
     begin
         if(reset) begin
@@ -72,15 +73,35 @@ module dsp (
                 streaming_source_valid <= 1;
                 flag <= 1;
                 led[1] <= ~led[1];
-            end else if (flag == 1) begin            
-                streaming_source_data <= 32'd1489;
-                flag <= 2;
-            end else if (flag == 2) begin
+            end else if (flag == 1) begin
+                streaming_source_data <= 0;
                 streaming_source_valid <= 0;
-                flag = 0;
+                flag <= 0;
             end
         end
     end
+
+    // always @ (posedge clk or posedge reset)
+    // begin
+    //     if(reset) begin
+    //         led <= 8'h55;
+    //     end else begin
+    //         led[7] <= 1'b1;
+    //         led[6] <= 1'b0;
+    //         if (slave_chipselect) begin
+    //             if (slave_write) begin
+    //                 case(slave_address)
+    //                     memory_data: 
+    //                         begin
+    //                             streaming_source_data <= slave_writedata;
+    //                             streaming_source_valid <= 1'b1;
+    //                             led[1] <= ~led[1];
+    //                         end
+    //                 endcase
+    //             end
+    //         end
+    //     end
+    // end
 
 
 endmodule
