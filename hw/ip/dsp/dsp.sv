@@ -54,7 +54,10 @@ module dsp (
 
     reg pre_key;
     wire start_edge;
-    always @ (posedge clk) pre_key <= key[0];
+    always @ (posedge clk)
+    begin
+        pre_key <= key[0];
+    end
     assign start_edge = (~pre_key & key[0])?1'b1:1'b0;
 
 

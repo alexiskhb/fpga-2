@@ -15,6 +15,7 @@ module adc_fifo (
         input wire                 avalon_slave_address,
         input wire                 avalon_slave_read,
         output reg         [31:0]  avalon_slave_readdata,
+        output reg                 avalon_slave_waitrequest,
 
         input wire                 avalon_streaming_sink_valid,
         input wire         [31:0]  avalon_streaming_sink_data
@@ -35,7 +36,7 @@ module adc_fifo (
             if (avalon_streaming_sink_valid == 1'b1 && avalon_streaming_sink_data == 32'd123) begin
                 dma_event <= 1'b1;                
             end else if (flag_in == 2) begin
-                dma_event <= 0;
+                dma_event <= 17;
             end
         end
     end
@@ -57,8 +58,8 @@ module adc_fifo (
             end else if (flag_in == 2) begin
                 avalon_streaming_source_valid <= 0;
                 flag_in <= 3;
-            end else if (flag_in == 3) begin
-                flag_in <= 0;
+            end else if (flag_out == 5) begin
+                flag_in <= 17;
             end
         end
     end
@@ -70,16 +71,20 @@ module adc_fifo (
             avalon_master_read <= 0;
             avalon_slave_readdata <= 0;
         end else begin
-            if (flag_in == 3) begin
+            if (flag_in == 3 && avalon_slave_read == 1'b1 && flag_out == 0) begin
                 avalon_master_read <= 1;
-                avalon_slave_readdata <= avalon_master_readdata;
+                avalon_slave_waitrequest <= 1;
                 flag_out <= 4;
             end else if (flag_out == 4) begin
                 avalon_slave_readdata <= avalon_master_readdata;
                 flag_out <= 5;
-            end else if (flag_out == 5) begin
+            end else if (flag_out == 5 && avalon_slave_read == 1'b1) begin
+                avalon_slave_readdata <= avalon_master_readdata;
+                flag_out <= 6;
+            end else if (flag_out == 6) begin
+                avalon_slave_waitrequest <= 0;
                 avalon_master_read <= 0;
-                flag_out <= 0;
+                flag_out <= 17;
             end
         end
     end
