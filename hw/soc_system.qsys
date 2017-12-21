@@ -357,6 +357,14 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -470,7 +478,7 @@
   <parameter name="errorWidth" value="8" />
   <parameter name="fifoDepth" value="8192" />
   <parameter name="fifoInputInterfaceOptions" value="AVALONST_SINK" />
-  <parameter name="fifoOutputInterfaceOptions" value="AVALONMM_READ" />
+  <parameter name="fifoOutputInterfaceOptions" value="AVALONST_SOURCE" />
   <parameter name="showHiddenFeatures" value="false" />
   <parameter name="singleClockMode" value="true" />
   <parameter name="singleResetMode" value="false" />
@@ -1321,15 +1329,6 @@
  <connection
    kind="avalon"
    version="17.1"
-   start="adc_fifo.avalon_master"
-   end="fifo_0.out">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
- <connection
-   kind="avalon"
-   version="17.1"
    start="hps_0.h2f_axi_master"
    end="onchip_memory2_0.s1">
   <parameter name="arbitrationPriority" value="1" />
@@ -1459,6 +1458,11 @@
    version="17.1"
    start="adc_fifo.avalon_streaming_source"
    end="fifo_0.in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="fifo_0.out"
+   end="adc_fifo.avalon_streaming_sink_1" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="dma_0.clk" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="pll_0.refclk" />
  <connection

@@ -18,7 +18,12 @@ module adc_fifo (
         output reg                 avalon_slave_waitrequest,
 
         input wire                 avalon_streaming_sink_valid,
-        input wire         [31:0]  avalon_streaming_sink_data
+        input wire         [31:0]  avalon_streaming_sink_data,
+
+        input wire         [31:0]  avalon_streaming_sink_1_data,
+        input wire         [7:0]   avalon_streaming_sink_1_channel,
+        input wire         [7:0]   avalon_streaming_sink_1_error,
+        input wire                 avalon_streaming_sink_1_valid
     );
 
     
@@ -71,19 +76,21 @@ module adc_fifo (
     begin
         if (reset) begin
             flag_out <= 0;
-            avalon_master_read <= 0;
+            // avalon_master_read <= 0;
             avalon_slave_readdata <= 0;
         end else begin
             if (flag_in == 4 && flag_out == 0) begin
-                avalon_master_read <= 1;
+                // avalon_master_read <= 1;
                 // avalon_slave_waitrequest <= 1;
                 flag_out <= 3;
             end else if (flag_out == 3) begin
-                avalon_slave_readdata <= avalon_master_readdata;
+                // avalon_slave_readdata <= avalon_master_readdata;
+                avalon_slave_readdata <= avalon_streaming_sink_1_data;
                 flag_out <= 4;
             end else if (avalon_slave_read == 1'b1 && flag_out == 4) begin
                 // avalon_slave_readdata <= 32'd124;
-                avalon_slave_readdata <= avalon_master_readdata;
+                // avalon_slave_readdata <= avalon_master_readdata;
+                avalon_slave_readdata <= avalon_streaming_sink_1_data;
                 flag_out <= 5;
             end else if (avalon_slave_read == 1'b1 && flag_out == 5) begin
                 avalon_slave_readdata <= 32'd4294967295;
