@@ -1,16 +1,19 @@
 #include <fftw3.h>
 #include <cmath>
+#include "processing.h"
 
-void process_ping_guilbert(const unsigned short *data, const int blocks_num, const int block_size, unsigned short *data_out, const float threshold)
+void process_ping_guilbert(const unsigned short* data, const int blocks_num, const int block_size, 
+                           unsigned short* data_out, const float threshold, std::vector<short>& spectra_out)
 {
     float out[blocks_num][block_size];
     fftw_complex in_complex[blocks_num][block_size], out_complex[blocks_num][block_size];
     fftw_plan plan[blocks_num], plan_inv[blocks_num];
     float max_n = -1;
     float tmp = 0;
+    spectra_out.resize(block_size*blocks_num);
 
     for (int i = 0; i < blocks_num; ++i) {
-        plan[i] = fftw_plan_dft_1d(block_size, in_complex[i], out_complex[i], FFTW_FOR WARD, FFTW_ESTIMATE);
+        plan[i] = fftw_plan_dft_1d(block_size, in_complex[i], out_complex[i], FFTW_FORWARD, FFTW_ESTIMATE);
         plan_inv[i] = fftw_plan_dft_1d(block_size, in_complex[i], out_complex[i], FFTW_BACKWARD, FFTW_ESTIMATE);
         tmp = data[block_size * i];
         max_n = -1;
@@ -21,7 +24,6 @@ void process_ping_guilbert(const unsigned short *data, const int blocks_num, con
             max_n = fmaxf(fabs(in_complex[i][j][0]), max_n);
         }
     }
-
     for (int i = 0; i < blocks_num; ++i) {
         for (int j = 0; j < block_size; ++j) {
             in_complex[i][j][0] /= max_n;
@@ -43,6 +45,7 @@ void process_ping_guilbert(const unsigned short *data, const int blocks_num, con
         for (int j = 0; j < block_size; ++j) {
             out[i][j] = sqrtf(out_complex[i][j][0] * out_complex[i][j][0] + out_complex[i][j][1] * out_complex[i][j][1]);
             max_n = fmaxf(fabs(out[i][j]), max_n);
+            spectra_out[i*block_size + j] = out[i][j];
         }
 
         data_out[i] = 0;
@@ -55,5 +58,4 @@ void process_ping_guilbert(const unsigned short *data, const int blocks_num, con
         fftw_destroy_plan(plan[i]);
         fftw_destroy_plan(plan_inv[i]);
     }
-
 }

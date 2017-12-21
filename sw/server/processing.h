@@ -5,4 +5,7 @@
 #define BLOCKS_FOR_ANALYZE  8
 #define TAIL_LENGTH         2
 
-void process_ping_guilbert(const unsigned short *data, const int blocks_num, const int block_size, unsigned short *data_out, const float threshold);
+#include <vector>
+
+void process_ping_guilbert(const unsigned short* data, const int blocks_num, const int block_size, 
+                           unsigned short* data_out, const float threshold, std::vector<short>& spectra_out);

@@ -4,8 +4,15 @@
         <title>index</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="js/jquery-1.11.0.min.js"></script>
+        <script src="js/flot/jquery.min.js"></script>
+        <script src="js/flot/jquery.flot.min.js"></script>
         <script src="js/events.js"></script>
+        <style>
+            .chartField {
+                width: 100%;
+                height: 128px;
+            }
+        </style>
     </head>
     <body>
         <div>
@@ -23,7 +30,7 @@
         <div>
             <div class="container">
                 <div>
-                    a1 <input type="text" value="0;0;0" id="a1_coord">     
+                    a1 <input type="text" value="0;0;0" id="a1_coord">  
                     <br>
                     a2 <input type="text" value="0;0;0" id="a2_coord">
                     <br>
@@ -37,7 +44,17 @@
                 </div>
             </div>
         </div>
-
-        <div id="chartContainer" style="height: 370px; width:100%;"></div>
+        <div><button id="chartButton">chart</button></div>
+        <div class="chartContainer">
+        <table width="100%" height="100%">
+            <tr><td><div id="chart00" class="chartField"></div></td><td><div id="chart01" class="chartField"></div></td></tr>
+            <tr><td><div id="chart10" class="chartField"></div></td><td><div id="chart11" class="chartField"></div></td></tr>
+            <tr><td><div id="chart20" class="chartField"></div></td><td><div id="chart21" class="chartField"></div></td></tr>
+            <tr><td><div id="chart30" class="chartField"></div></td><td><div id="chart31" class="chartField"></div></td></tr>
+            <tr><td><div id="chart40" class="chartField"></div></td><td><div id="chart41" class="chartField"></div></td></tr>
+        </table>
+        </div>
+        <!-- <div class="chartContainer"> -->
+        <!-- </div> -->
     </body>
 </html>

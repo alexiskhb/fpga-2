@@ -55,22 +55,61 @@ $(document).ready(function() {
         });
     });
 
+    $("#chartButton").click(function() {
+        // $.plot("#chart", data, options);
+    });
+
     function update_contents() {
+        var options = [{
+            lines: {
+                show: true,
+                color: "rgba(255, 255, 255, 0.8)"
+            },
+            points: {
+                show: false
+            },
+            xaxis: {
+                tickDecimals: 1,
+                tickSize: 5
+            },
+            colors: ["#0022FF"]
+        }, {
+            lines: {
+                show: true,
+                color: "rgba(255, 255, 255, 0.8)"
+            },
+            points: {
+                show: false
+            },
+            xaxis: {
+                tickDecimals: 1,
+                tickSize: 5
+            },
+        }];
+
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
             success: function(result) {
-                let delays = result.split(';');
+                result = result.split('|');
+                let delays = result[0].split(';');
                 document.getElementById('result2').innerHTML = delays;
+                result[1] = result[1].split(';')
+                result[2] = result[2].split(';')
+                for (var i = 0; i < result[1].length; i++) {
+                    for (var j = 0; j < 2; j++) {
+                        $.plot(("#chart" + i) + j, JSON.parse(result[j + 1][i]), options[j]);
+                    }
+                }
             }
-        }); 
+        });
     }
 
     function start() {
-        setInterval(update_contents, 1000);
+        setInterval(update_contents, 2000);
     }
 
-    $(window).on("load", function(e){
+    $(window).on("load", function(e) {
         start();
     });
 });

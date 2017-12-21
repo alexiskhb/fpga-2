@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <string>
+#include <limits>
+#include <ctime>
 #include <random>
 
 #include "processing.h"
@@ -18,19 +20,23 @@ class Driver
 public:
     void send(int cmd, int* data) 
     {
-        ioctl(fd, cmd, reinterpret_cast<char*>(data));
+        // ioctl(fd, cmd, reinterpret_cast<char*>(data));
     }
 
-    void recv(int cmd, std::vector<unsigned short>& out_data) //8192 
+    int recv(int cmd, std::vector<ushort>& out_data) 
     {
-        int k = 8192/4;
-        out_data.resize(k*4);
+        int limit = std::numeric_limits<ushort>::max()/1000;
+        int blocks_num = 5;
+        int k = 1024*2;
+        out_data.resize(k*blocks_num);
         for (int i = 0; i < k; i++) {
-            out_data[0*k + i] = rand();
-            out_data[1*k + i] = rand();
-            out_data[2*k + i] = rand();
-            out_data[3*k + i] = rand();
+            out_data[0*k + i] =   limit*sin(     (i + std::time(0))/10.0) +   limit;
+            out_data[1*k + i] = 2*limit*sin( 250*(i + std::time(0))/10.0) + 2*limit;
+            out_data[2*k + i] = 3*limit*sin( 500*(i + std::time(0))/10.0) + 3*limit;
+            out_data[3*k + i] = 4*limit*sin(1000*(i + std::time(0))/10.0) + 4*limit;
+            out_data[(blocks_num - 1)*k + i] = out_data[0*k + i] + out_data[1*k + i] + out_data[2*k + i] + out_data[3*k + i];
         }
+        return blocks_num;
     }
 
     bool is_ready() 
@@ -43,7 +49,7 @@ public:
         fd = open(name, O_RDWR);
         if (fd < 0) {
             std::cerr << "failed open ham device" << std::endl;
-            return false;
+            // return false;
         }
         return true;
     }
@@ -51,21 +57,17 @@ private:
     int fd;
 };
 
+Driver driver;
+
 class WebClientRequest: public Fastcgipp::Request<wchar_t>
 {
 public:
-    WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024) 
-    {
-        // Wrong: new request is created on every request
-        // driver.init(DEVICE_NAME);
-    }
-    
+    WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024)
+    {}
 private:
-    int data[4];
-    Driver driver;
-    
+    unsigned short data[4];
 private:
-    bool inProcessor() 
+    bool inProcessor()
     {
         using namespace std;
         string s(environment().postBuffer().begin(), environment().postBuffer().end());
@@ -87,34 +89,53 @@ private:
                 data[i] = k;
             }
             cout << endl;
-            driver.send(IOCTL_SEND_4_NUMBERS, data);
+            // driver.send(IOCTL_SEND_4_NUMBERS, data);
         }
         return true;
     }
 
     bool response()
     {
-        int adc_value = 0;
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
             std::vector<unsigned short> data;
-            driver.recv(0, data);
+            std::vector<short> spectra;
             unsigned short delays[4];
             float threshold = 0.14;
-            process_ping_guilbert(data.data(), 4, 1024, delays, threshold);
-            out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3];
+            int blocks_num = driver.recv(0, data);
+            threshold = 0.95;
+            process_ping_guilbert(data.data(), 4, 1024, delays, threshold, spectra);
+            out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3] << "|";
+            int slice_size = 64, block_size = data.size()/blocks_num;
+            for (int k = 0; k < blocks_num; k++) {
+                out << "[[";
+                for (int i = 0; i < slice_size - 1; ++i) {
+                    out << '[' << i << ',' << data[k*block_size + i] << "],"; 
+                }
+                out << '[' << slice_size - 1 << ',' << data[k*block_size + slice_size - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
+            }
+            out << "|";
+            for (int k = 0; k < blocks_num; k++) {
+                out << "[[";
+                for (int i = 0; i < slice_size - 1; ++i) {
+                    out << '[' << i << ',' << spectra[k*block_size + i] << "],"; 
+                }
+                out << '[' << slice_size - 1 << ',' << spectra[k*block_size + slice_size - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
+            }
         }
-        out <<  std::to_wstring(0);
+
         return true;
     }
 };
 
 int main(int argc, char** argv)
 {
+    // driver.init();
     Fastcgipp::Manager<WebClientRequest> manager;
     manager.setupSignals();
     manager.listen("127.0.0.1", argc > 1 ? argv[1] : "8000");
     manager.start();
     manager.join();
+    return 0;
 }
