@@ -73,6 +73,14 @@
          type = "int";
       }
    }
+   element fifo_0.in_csr
+   {
+      datum baseAddress
+      {
+         value = "0";
+         type = "String";
+      }
+   }
    element fpga_only_master
    {
       datum _sortIndex
@@ -187,6 +195,38 @@
       {
          value = "8";
          type = "int";
+      }
+   }
+   element sc_fifo_0
+   {
+      datum _sortIndex
+      {
+         value = "14";
+         type = "int";
+      }
+   }
+   element sc_fifo_0.csr
+   {
+      datum baseAddress
+      {
+         value = "0";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
       }
    }
    element soc_system
@@ -484,11 +524,11 @@
   <parameter name="singleResetMode" value="false" />
   <parameter name="symbolsPerBeat" value="1" />
   <parameter name="useBackpressure" value="false" />
-  <parameter name="useIRQ" value="true" />
+  <parameter name="useIRQ" value="false" />
   <parameter name="usePacket" value="false" />
   <parameter name="useReadControl" value="false" />
   <parameter name="useRegister" value="false" />
-  <parameter name="useWriteControl" value="false" />
+  <parameter name="useWriteControl" value="true" />
  </module>
  <module
    name="fpga_only_master"
@@ -1311,12 +1351,41 @@
   <parameter name="gui_use_locked" value="false" />
  </module>
  <module
+   name="sc_fifo_0"
+   kind="altera_avalon_sc_fifo"
+   version="17.1"
+   enabled="1">
+  <parameter name="BITS_PER_SYMBOL" value="32" />
+  <parameter name="CHANNEL_WIDTH" value="8" />
+  <parameter name="EMPTY_LATENCY" value="3" />
+  <parameter name="ENABLE_EXPLICIT_MAXCHANNEL" value="false" />
+  <parameter name="ERROR_WIDTH" value="8" />
+  <parameter name="EXPLICIT_MAXCHANNEL" value="0" />
+  <parameter name="FIFO_DEPTH" value="8192" />
+  <parameter name="SYMBOLS_PER_BEAT" value="1" />
+  <parameter name="USE_ALMOST_EMPTY_IF" value="0" />
+  <parameter name="USE_ALMOST_FULL_IF" value="0" />
+  <parameter name="USE_FILL_LEVEL" value="1" />
+  <parameter name="USE_MEMORY_BLOCKS" value="1" />
+  <parameter name="USE_PACKETS" value="0" />
+  <parameter name="USE_STORE_FORWARD" value="1" />
+ </module>
+ <module
    name="sysid_qsys"
    kind="altera_avalon_sysid_qsys"
    version="17.1"
    enabled="1">
   <parameter name="id" value="-1395322110" />
  </module>
+ <connection
+   kind="avalon"
+   version="17.1"
+   start="adc_fifo.avalon_master"
+   end="sc_fifo_0.csr">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
  <connection
    kind="avalon"
    version="17.1"
@@ -1446,22 +1515,17 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
-   start="adc.avalon_streaming_source"
-   end="dsp.avalon_streaming_sink" />
- <connection
-   kind="avalon_streaming"
-   version="17.1"
    start="dsp.avalon_streaming_source"
    end="adc_fifo.avalon_streaming_sink" />
  <connection
    kind="avalon_streaming"
    version="17.1"
    start="adc_fifo.avalon_streaming_source"
-   end="fifo_0.in" />
+   end="sc_fifo_0.in" />
  <connection
    kind="avalon_streaming"
    version="17.1"
-   start="fifo_0.out"
+   start="sc_fifo_0.out"
    end="adc_fifo.avalon_streaming_sink_1" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="dma_0.clk" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="pll_0.refclk" />
@@ -1486,6 +1550,7 @@
    version="17.1"
    start="pll_0.outclk2"
    end="hps_only_master.clk" />
+ <connection kind="clock" version="17.1" start="pll_0.outclk2" end="sc_fifo_0.clk" />
  <connection
    kind="clock"
    version="17.1"
@@ -1570,6 +1635,11 @@
    version="17.1"
    start="clk_0.clk_reset"
    end="fpga_only_master.clk_reset" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="sc_fifo_0.clk_reset" />
  <connection
    kind="reset"
    version="17.1"
