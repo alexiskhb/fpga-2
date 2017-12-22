@@ -3,7 +3,7 @@
 #include "processing.h"
 
 void process_ping_guilbert(const unsigned short* data, const int blocks_num, const int block_size, 
-                           unsigned short* data_out, const float threshold, std::vector<short>& spectra_out)
+                           unsigned short* data_out, const float threshold, std::vector<std::pair<short, short>>& spectra_out)
 {
     float out[blocks_num][block_size];
     fftw_complex in_complex[blocks_num][block_size], out_complex[blocks_num][block_size];
@@ -40,12 +40,11 @@ void process_ping_guilbert(const unsigned short* data, const int blocks_num, con
             }
         }
         fftw_execute(plan_inv[i]);
-
         max_n = -1;
         for (int j = 0; j < block_size; ++j) {
             out[i][j] = sqrtf(out_complex[i][j][0] * out_complex[i][j][0] + out_complex[i][j][1] * out_complex[i][j][1]);
             max_n = fmaxf(fabs(out[i][j]), max_n);
-            spectra_out[i*block_size + j] = out[i][j];
+            spectra_out[i*block_size + j] = {out_complex[i][j][0], out_complex[i][j][1]};
         }
 
         data_out[i] = 0;

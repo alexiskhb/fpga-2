@@ -8,4 +8,4 @@
 #include <vector>
 
 void process_ping_guilbert(const unsigned short* data, const int blocks_num, const int block_size, 
-                           unsigned short* data_out, const float threshold, std::vector<short>& spectra_out);
+                           unsigned short* data_out, const float threshold, std::vector<std::pair<short, short>>& spectra_out);

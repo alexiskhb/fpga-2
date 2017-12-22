@@ -15,28 +15,73 @@
 
 #define DEVICE_NAME "/dev/ham"
 
+int upperpow2(int k) {
+    int result = 1;
+    while (result < k) {
+        result <<= 1;
+    }
+    return result;
+}
+
+class Pinger {
+public:
+    using datatype = uint16_t;
+    Pinger(int x, int y, int z, int freq/*kHz*/, int pulse_len/*ms*/, int amplitude = 100, int detalization = 30) : 
+        x(x), y(y), z(z), freq(freq), pulse_len(pulse_len), detl(detalization), ampl(amplitude)
+    {}
+
+    std::vector<datatype> generate(std::vector<float> distances/*meters*/) 
+    {
+        int min_dist = distances.front();
+        for (int d: distances) {
+            if (d < min_dist) {
+                min_dist = d;
+            }
+        }
+        int periods = pulse_len * freq;
+        int block_size = upperpow2(periods*detl);
+        int blocks_num = distances.size();
+        std::vector<datatype> result(block_size * blocks_num);
+        float delta = 1.0 / (freq * detl);
+        m_generate_data(block_size, delta);
+        for (int i = 0; i < blocks_num; i++) {
+            m_generate_impl(result.begin() + block_size*i, distances[i] - min_dist);
+        }
+        return result;
+    }
+public:
+    void m_generate_impl(const std::vector<datatype>::iterator begin, int dist)
+    {
+        int shift = 0;
+        std::copy(data.begin(), data.end() - shift, begin + shift);
+    }
+
+    void m_generate_data(int block_size, float delta)
+    {
+        data.resize(block_size);
+        for (int i = 0; i < block_size; i++) {
+            float t = delta*i;
+            data[i] = ampl*sin(t) + ampl/2 + 1;
+        }
+    }
+    int x, y, z, freq, pulse_len, detl, ampl;
+    std::vector<datatype> data;
+};
+
+Pinger pinger{0, 0, 0, 20, 1};
+
 class Driver 
 {
 public:
-    void send(int cmd, int* data) 
+    void send(int cmd, int* data)
     {
         // ioctl(fd, cmd, reinterpret_cast<char*>(data));
     }
 
     int recv(int cmd, std::vector<ushort>& out_data) 
     {
-        int limit = std::numeric_limits<ushort>::max()/1000;
-        int blocks_num = 5;
-        int k = 1024*2;
-        out_data.resize(k*blocks_num);
-        for (int i = 0; i < k; i++) {
-            out_data[0*k + i] =   limit*sin(     (i + std::time(0))/10.0) +   limit;
-            out_data[1*k + i] = 2*limit*sin( 250*(i + std::time(0))/10.0) + 2*limit;
-            out_data[2*k + i] = 3*limit*sin( 500*(i + std::time(0))/10.0) + 3*limit;
-            out_data[3*k + i] = 4*limit*sin(1000*(i + std::time(0))/10.0) + 4*limit;
-            out_data[(blocks_num - 1)*k + i] = out_data[0*k + i] + out_data[1*k + i] + out_data[2*k + i] + out_data[3*k + i];
-        }
-        return blocks_num;
+        out_data = pinger.generate({0, 0, 0, 0});
+        return 4;
     }
 
     bool is_ready() 
@@ -99,13 +144,13 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
-            std::vector<unsigned short> data;
-            std::vector<short> spectra;
+            std::vector<uint16_t> data;
+            std::vector<std::pair<short, short>> spectra;
             unsigned short delays[4];
             float threshold = 0.14;
             int blocks_num = driver.recv(0, data);
             threshold = 0.95;
-            process_ping_guilbert(data.data(), 4, 1024, delays, threshold, spectra);
+            process_ping_guilbert(data.data(), blocks_num, data.size()/blocks_num/2, delays, threshold, spectra);
             out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3] << "|";
             int slice_size = 64, block_size = data.size()/blocks_num;
             for (int k = 0; k < blocks_num; k++) {
@@ -119,9 +164,14 @@ private:
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
                 for (int i = 0; i < slice_size - 1; ++i) {
-                    out << '[' << i << ',' << spectra[k*block_size + i] << "],"; 
+                    out << '[' << i << ',' << spectra[k*block_size + i].first << "],"; 
                 }
-                out << '[' << slice_size - 1 << ',' << spectra[k*block_size + slice_size - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
+                out << '[' << slice_size - 1 << ',' << spectra[k*block_size + slice_size - 1].first << "]],[";
+
+                for (int i = 0; i < slice_size - 1; ++i) {
+                    out << '[' << i << ',' << spectra[k*block_size + i].second << "],"; 
+                }
+                out << '[' << slice_size - 1 << ',' << spectra[k*block_size + slice_size - 1].second << (k < blocks_num - 1 ? "]]];" : "]]]");
             }
         }
 

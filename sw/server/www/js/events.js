@@ -5,14 +5,14 @@ const inv_ns = 1e8;
 function to_byte_str_32(num) {
     arr = new ArrayBuffer(4);
     view = new DataView(arr);
-    view.setUint32(0, num, false); // byteOffset = 0; litteEndian = false
+    view.setUint32(0, num, false);
     return arr;
 }
 
 $(document).ready(function() {
     $("#set_mask_button").click(function() {
-        let num = parseInt($('#mask_edit').val())
-        alert(num)
+        let num = parseInt($('#mask_edit').val());
+        alert(num);
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
@@ -94,8 +94,8 @@ $(document).ready(function() {
                 result = result.split('|');
                 let delays = result[0].split(';');
                 document.getElementById('result2').innerHTML = delays;
-                result[1] = result[1].split(';')
-                result[2] = result[2].split(';')
+                result[1] = result[1].split(';');
+                result[2] = result[2].split(';');
                 for (var i = 0; i < result[1].length; i++) {
                     for (var j = 0; j < 2; j++) {
                         $.plot(("#chart" + i) + j, JSON.parse(result[j + 1][i]), options[j]);
