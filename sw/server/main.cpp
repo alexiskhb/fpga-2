@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sstream>
 #include <fcntl.h>
 #include <string>
 #include <limits>
@@ -26,8 +27,8 @@ int upperpow2(int k) {
 class Pinger {
 public:
     using datatype = uint16_t;
-    Pinger(int x, int y, int z, int freq/*kHz*/, int pulse_len/*ms*/, int amplitude = 100, int detalization = 30) : 
-        x(x), y(y), z(z), freq(freq), pulse_len(pulse_len), detl(detalization), ampl(amplitude)
+    Pinger(int freq/*kHz*/, int pulse_len/*ms*/, int amplitude = 100, int detalization = 30) : 
+        freq(freq), pulse_len(pulse_len), detl(detalization), ampl(amplitude)
     {
         this->delta = 1.0 / (1000 * freq * detl);
         this->periods = pulse_len * freq;
@@ -74,12 +75,10 @@ public:
             data[i] = ampl*sin(t) + ampl + 1;
         }
     }
-    int x, y, z, freq, pulse_len, detl, ampl, periods, block_size;
+    int freq, pulse_len, detl, ampl, periods, block_size;
     float delta;
     std::vector<datatype> data;
 };
-
-Pinger pinger{0, 0, 0, 20, 1, 100, 50};
 
 class Driver 
 {
@@ -89,10 +88,10 @@ public:
         // ioctl(fd, cmd, reinterpret_cast<char*>(data));
     }
 
-    int recv(int cmd, std::vector<ushort>& out_data) 
+    int recv(int cmd, const std::vector<float>& distances, std::vector<ushort>& out_data) 
     {
-        out_data = pinger.generate({0.2, 0.08, 0.2, 0.3});
-        return 4;
+        // out_data = pinger.generate(distances);
+        return distances.size();
     }
 
     bool is_ready() 
@@ -122,30 +121,16 @@ public:
     {}
 private:
     unsigned short data[4];
+    float d1 = 0, d2 = 0, d3 = 0, d4 = 0, threshold = 0.5;
+    int slice_beg = 0, slice_end = 250, frequency = 20, pulse_len = 1, detalization = 30;
 private:
     bool inProcessor()
     {
         using namespace std;
         string s(environment().postBuffer().begin(), environment().postBuffer().end());
-        if (s.size() > 0) {
-            auto st = s.begin();
-            for (int i = 0; i < 4; i++) {
-                auto l = find(st, s.end(), '=');
-                if (l == s.end()) {
-                    throw runtime_error("4-numbers-query is invalid");
-                }
-                int k = 0;
-                while (l != s.end() && *l != '&') {
-                    k = 10*k + *l - '0';
-                    l++;
-                }
-                st = l;
-                cout << k << ' ';
-                cout.flush();
-                data[i] = k;
-            }
-            cout << endl;
-        }
+        std::stringstream ss(s);
+        ss >> d1 >> d2 >> d3 >> d4 >> slice_beg >> slice_end >> threshold >> frequency >> pulse_len >> detalization;
+        std::cout << "POST:>/" << s << "/<" << std::endl;
         return true;
     }
 
@@ -154,34 +139,32 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
-            std::vector<uint16_t> data;
+            std::vector<uint16_t> data = Pinger{frequency, pulse_len, 100, detalization}.generate({d1, d2, d3, d4});
             std::vector<std::pair<short, short>> spectra;
             unsigned short delays[4];
-            float threshold = 0.14;
-            int blocks_num = driver.recv(0, data);
-            threshold = 0.95;
-            int block_size = data.size()/blocks_num, slice_size = 256;
+            int blocks_num = 4;
+            int block_size = data.size()/blocks_num;
             process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, spectra);
             out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3] << "|";
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
-                for (int i = 0; i < slice_size - 1; ++i) {
+                for (int i = slice_beg; i < slice_end - 1; ++i) {
                     out << '[' << i << ',' << data[k*block_size + i] << "],"; 
                 }
-                out << '[' << slice_size - 1 << ',' << data[k*block_size + slice_size - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
+                out << '[' << slice_end - 1 << ',' << data[k*block_size + slice_end - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
             }
             out << "|";
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
-                for (int i = 0; i < slice_size - 1; ++i) {
+                for (int i = slice_beg; i < slice_end - 1; ++i) {
                     out << '[' << i << ',' << spectra[k*block_size + i].first << "],"; 
                 }
-                out << '[' << slice_size - 1 << ',' << spectra[k*block_size + slice_size - 1].first << "]],[";
+                out << '[' << slice_end - 1 << ',' << spectra[k*block_size + slice_end - 1].first << "]],[";
 
-                for (int i = 0; i < slice_size - 1; ++i) {
+                for (int i = slice_beg; i < slice_end - 1; ++i) {
                     out << '[' << i << ',' << spectra[k*block_size + i].second << "],"; 
                 }
-                out << '[' << slice_size - 1 << ',' << spectra[k*block_size + slice_size - 1].second << (k < blocks_num - 1 ? "]]];" : "]]]");
+                out << '[' << slice_end - 1 << ',' << spectra[k*block_size + slice_end - 1].second << (k < blocks_num - 1 ? "]]];" : "]]]");
             }
         }
 

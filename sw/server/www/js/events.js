@@ -42,24 +42,26 @@ $(document).ready(function() {
         let l3 = Math.floor((d3 - d_min)/speed_of_sound*inv_ns);
         let l4 = Math.floor((d4 - d_min)/speed_of_sound*inv_ns);
 
-        $.ajax({
-            url: fastcgiAddress,
-            type: "POST",
-            data: {
-                "l1" : l1, 
-                "l2" : l2, 
-                "l3" : l3, 
-                "l4" : l4
-            },
-            success: function (data) {}
-        });
+        slice = document.getElementById('slice').value.split(';');
+        slice_beg = slice[0];
+        slice_end = slice[1];
+        threshold = document.getElementById('threshold').value;
+        frequency = document.getElementById('frequency').value;
+        pulse_len = document.getElementById('pulse_len').value;
+        detalization = document.getElementById('detalization').value;
+        post_data = spacify([d1, d2, d3, d4, slice_beg, slice_end, threshold, frequency, pulse_len, detalization]); 
+        update_contents(post_data);      
     });
 
-    $("#chartButton").click(function() {
-        // $.plot("#chart", data, options);
-    });
+    function spacify(ary) {
+        result = "";
+        for (var i = 0; i < ary.length; i++) {
+            result += ary[i] + " ";
+        }
+        return result;
+    }
 
-    function update_contents() {
+    function update_contents(post_data) {
         var options = [{
             lines: {
                 show: true,
@@ -90,6 +92,7 @@ $(document).ready(function() {
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
+            data: post_data,
             success: function(result) {
                 result = result.split('|');
                 let delays = result[0].split(';');
@@ -106,7 +109,7 @@ $(document).ready(function() {
     }
 
     function start() {
-        setInterval(update_contents, 2000);
+        // setInterval(update_contents, 2000);
     }
 
     $(window).on("load", function(e) {
