@@ -28,21 +28,28 @@ public:
     using datatype = uint16_t;
     Pinger(int x, int y, int z, int freq/*kHz*/, int pulse_len/*ms*/, int amplitude = 100, int detalization = 30) : 
         x(x), y(y), z(z), freq(freq), pulse_len(pulse_len), detl(detalization), ampl(amplitude)
-    {}
+    {
+        this->delta = 1.0 / (1000 * freq * detl);
+        this->periods = pulse_len * freq;
+        this->block_size = upperpow2(periods*detl);
+        std::cout << 
+            "freq: " << freq <<
+            "\ndelta: " << delta <<
+            "\ndetalization: " << detalization << 
+            "\nperiods: " << periods <<
+            "\nblock size: " << block_size << std::endl;
+    }
 
     std::vector<datatype> generate(std::vector<float> distances/*meters*/) 
     {
-        int min_dist = distances.front();
+        float min_dist = distances.front();
         for (int d: distances) {
             if (d < min_dist) {
                 min_dist = d;
             }
         }
-        int periods = pulse_len * freq;
-        int block_size = upperpow2(periods*detl);
         int blocks_num = distances.size();
         std::vector<datatype> result(block_size * blocks_num);
-        float delta = 1.0 / (freq * detl);
         m_generate_data(block_size, delta);
         for (int i = 0; i < blocks_num; i++) {
             m_generate_impl(result.begin() + block_size*i, distances[i] - min_dist);
@@ -50,9 +57,12 @@ public:
         return result;
     }
 public:
-    void m_generate_impl(const std::vector<datatype>::iterator begin, int dist)
+    void m_generate_impl(const std::vector<datatype>::iterator begin, float dist)
     {
-        int shift = 0;
+        float speed_of_sound = 1468.5;
+        int shift = (dist/delta)/speed_of_sound;
+        std::cout << shift << std::endl;
+        std::fill(begin, begin + shift, 0);
         std::copy(data.begin(), data.end() - shift, begin + shift);
     }
 
@@ -60,15 +70,16 @@ public:
     {
         data.resize(block_size);
         for (int i = 0; i < block_size; i++) {
-            float t = delta*i;
-            data[i] = ampl*sin(t) + ampl/2 + 1;
+            float t = delta*i*1000*1000;
+            data[i] = ampl*sin(t) + ampl + 1;
         }
     }
-    int x, y, z, freq, pulse_len, detl, ampl;
+    int x, y, z, freq, pulse_len, detl, ampl, periods, block_size;
+    float delta;
     std::vector<datatype> data;
 };
 
-Pinger pinger{0, 0, 0, 20, 1};
+Pinger pinger{0, 0, 0, 20, 1, 100, 50};
 
 class Driver 
 {
@@ -80,7 +91,7 @@ public:
 
     int recv(int cmd, std::vector<ushort>& out_data) 
     {
-        out_data = pinger.generate({0, 0, 0, 0});
+        out_data = pinger.generate({0.2, 0.08, 0.2, 0.3});
         return 4;
     }
 
@@ -134,7 +145,6 @@ private:
                 data[i] = k;
             }
             cout << endl;
-            // driver.send(IOCTL_SEND_4_NUMBERS, data);
         }
         return true;
     }
@@ -150,9 +160,9 @@ private:
             float threshold = 0.14;
             int blocks_num = driver.recv(0, data);
             threshold = 0.95;
-            process_ping_guilbert(data.data(), blocks_num, data.size()/blocks_num/2, delays, threshold, spectra);
+            int block_size = data.size()/blocks_num, slice_size = 256;
+            process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, spectra);
             out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3] << "|";
-            int slice_size = 64, block_size = data.size()/blocks_num;
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
                 for (int i = 0; i < slice_size - 1; ++i) {

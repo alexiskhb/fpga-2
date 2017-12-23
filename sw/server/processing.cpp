@@ -44,9 +44,9 @@ void process_ping_guilbert(const unsigned short* data, const int blocks_num, con
         for (int j = 0; j < block_size; ++j) {
             out[i][j] = sqrtf(out_complex[i][j][0] * out_complex[i][j][0] + out_complex[i][j][1] * out_complex[i][j][1]);
             max_n = fmaxf(fabs(out[i][j]), max_n);
-            spectra_out[i*block_size + j] = {out_complex[i][j][0], out_complex[i][j][1]};
+            spectra_out[i*block_size + j] = {out[i][j], out_complex[i][j][1]};
         }
-
+        
         data_out[i] = 0;
         for (short int j = block_size / 4; j < block_size; ++j) {
             if (fabs(out[i][j]) > threshold * max_n) {
