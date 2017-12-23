@@ -73,14 +73,6 @@
          type = "int";
       }
    }
-   element fifo_0.in_csr
-   {
-      datum baseAddress
-      {
-         value = "0";
-         type = "String";
-      }
-   }
    element fpga_only_master
    {
       datum _sortIndex
@@ -496,10 +488,10 @@
   <parameter name="avalonSpec" value="2.0" />
   <parameter name="bigEndian" value="false" />
   <parameter name="burstEnable" value="false" />
-  <parameter name="fifoDepth" value="32" />
+  <parameter name="fifoDepth" value="4096" />
   <parameter name="maxBurstSize" value="32" />
   <parameter name="minimumDmaTransactionRegisterWidth" value="4" />
-  <parameter name="readAddressMap"><![CDATA[<address-map><slave name='adc_fifo.avalon_slave' start='0x0' end='0x8' /></address-map>]]></parameter>
+  <parameter name="readAddressMap"><![CDATA[<address-map><slave name='fifo_0.out' start='0x0' end='0x8' /></address-map>]]></parameter>
   <parameter name="readSlaveAddressWidthMax" value="3" />
   <parameter name="readSlaveDataWidthMax" value="32" />
   <parameter name="softresetEnable" value="true" />
@@ -518,7 +510,7 @@
   <parameter name="errorWidth" value="8" />
   <parameter name="fifoDepth" value="8192" />
   <parameter name="fifoInputInterfaceOptions" value="AVALONST_SINK" />
-  <parameter name="fifoOutputInterfaceOptions" value="AVALONST_SOURCE" />
+  <parameter name="fifoOutputInterfaceOptions" value="AVALONMM_READ" />
   <parameter name="showHiddenFeatures" value="false" />
   <parameter name="singleClockMode" value="true" />
   <parameter name="singleResetMode" value="false" />
@@ -528,7 +520,7 @@
   <parameter name="usePacket" value="false" />
   <parameter name="useReadControl" value="false" />
   <parameter name="useRegister" value="false" />
-  <parameter name="useWriteControl" value="true" />
+  <parameter name="useWriteControl" value="false" />
  </module>
  <module
    name="fpga_only_master"
@@ -1498,7 +1490,7 @@
    kind="avalon"
    version="17.1"
    start="dma_0.read_master"
-   end="adc_fifo.avalon_slave">
+   end="fifo_0.out">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x0000" />
   <parameter name="defaultConnection" value="false" />
@@ -1525,9 +1517,13 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="adc_fifo.avalon_streaming_source_1"
+   end="fifo_0.in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="sc_fifo_0.out"
    end="adc_fifo.avalon_streaming_sink_1" />
- <connection kind="clock" version="17.1" start="clk_0.clk" end="dma_0.clk" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="pll_0.refclk" />
  <connection
    kind="clock"
@@ -1551,6 +1547,7 @@
    start="pll_0.outclk2"
    end="hps_only_master.clk" />
  <connection kind="clock" version="17.1" start="pll_0.outclk2" end="sc_fifo_0.clk" />
+ <connection kind="clock" version="17.1" start="pll_0.outclk2" end="dma_0.clk" />
  <connection
    kind="clock"
    version="17.1"

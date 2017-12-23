@@ -24,7 +24,10 @@ module adc_fifo (
         input wire         [7:0]   avalon_streaming_sink_1_channel,
         input wire         [7:0]   avalon_streaming_sink_1_error,
         input wire                 avalon_streaming_sink_1_valid,
-        output reg                 avalon_streaming_sink_1_ready
+        output reg                 avalon_streaming_sink_1_ready,
+
+        output reg         [31:0]  avalon_streaming_source_1_data,
+        output reg                 avalon_streaming_source_1_valid
     );
 
 
@@ -81,22 +84,39 @@ module adc_fifo (
             avalon_master_address <= 4;
             avalon_master_writedata <= 3;
             avalon_master_write <= 1'b1;
+            avalon_streaming_source_1_valid <= 0;
+            avalon_streaming_source_1_data <= 0;
         end else begin
+            // if (flag_in == 4 && flag_out == 0) begin
+            //     avalon_streaming_source_1_data <= 32'd123;
+            //     avalon_streaming_source_1_valid <= 1;
+            //     flag_out <= 3;
+            // end else if (flag_out == 3) begin
+            //     avalon_streaming_source_1_data <= 32'd1489;
+            //     flag_out <= 4;
+            // end else if (flag_out == 4) begin
+            //     flag_out <= 17;
+            //     avalon_streaming_source_1_valid <= 0;
+            // end
+
+
             avalon_master_write <= 1'b0;
             if (flag_in == 4 && flag_out == 0) begin
                 flag_out <= 3;
             end else if (flag_out == 3) begin
                 avalon_streaming_sink_1_ready <= 1'b1;
-                avalon_slave_readdata <= avalon_streaming_sink_1_data;
+                avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
+                avalon_streaming_source_1_valid <= 1;
                 flag_out <= 4;
-            end else if (avalon_slave_read == 1'b1 && flag_out == 4) begin
-                avalon_slave_readdata <= avalon_streaming_sink_1_data;
+            end else if (flag_out == 4) begin
+                avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
                 flag_out <= 5;
-            end else if (avalon_slave_read == 1'b1 && flag_out == 5) begin
-                avalon_slave_readdata <= 32'd4294967295;
+            end else if (flag_out == 5) begin
+                avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
                 flag_out <= 6;
             end else if (flag_out == 6) begin
-                avalon_master_read <= 0;
+                avalon_streaming_sink_1_ready <= 0'b0;
+                avalon_streaming_source_1_valid <= 0;
                 flag_out <= 17;
             end
             // if (flag_out == 0) begin
