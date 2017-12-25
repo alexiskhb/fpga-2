@@ -11,11 +11,6 @@ module top_testbench();
     wire    [31:0] dsp_avalon_streaming_source_data;
     wire           adc_fifo_avalon_streaming_source_valid;
     wire    [31:0] adc_fifo_avalon_streaming_source_data;
-    wire           avalon_st_adapter_001_out_0_valid;
-    wire    [31:0] avalon_st_adapter_001_out_0_data;
-    wire    [7:0]  avalon_st_adapter_001_out_0_channel;
-    wire    [7:0]  avalon_st_adapter_001_out_0_error;
-    wire          avalon_st_adapter_001_out_0_ready;
 
     wire   [31:0] adc_fifo_avalon_master_readdata;
     wire          adc_fifo_avalon_master_waitrequest;
@@ -23,6 +18,21 @@ module top_testbench();
     wire          adc_fifo_avalon_master_read;
     wire   [31:0] adc_fifo_avalon_master_writedata;
     wire          adc_fifo_avalon_master_write;
+
+    wire          avalon_st_adapter_001_out_0_valid;
+    wire   [31:0] avalon_st_adapter_001_out_0_data;
+    wire    [7:0] avalon_st_adapter_001_out_0_channel;
+    wire    [7:0] avalon_st_adapter_001_out_0_error;
+
+    wire          avalon_st_adapter_002_out_0_valid;
+    wire   [31:0] avalon_st_adapter_002_out_0_data;
+    wire          avalon_st_adapter_002_out_0_ready;
+    wire    [7:0] avalon_st_adapter_002_out_0_channel;
+    wire    [7:0] avalon_st_adapter_002_out_0_error;
+
+    wire   [31:0] mm_interconnect_4_fifo_0_out_readdata;
+    wire    [0:0] mm_interconnect_4_fifo_0_out_address;
+    wire          mm_interconnect_4_fifo_0_out_read;
 
 
     adc_fifo adc_fifo (
@@ -42,24 +52,25 @@ module top_testbench();
         .avalon_slave_waitrequest        (),
         .avalon_streaming_sink_valid     (dsp_avalon_streaming_source_valid),
         .avalon_streaming_sink_data      (dsp_avalon_streaming_source_data),
-        .avalon_streaming_sink_1_channel (avalon_st_adapter_001_out_0_channel),
-        .avalon_streaming_sink_1_data    (avalon_st_adapter_001_out_0_data),
-        .avalon_streaming_sink_1_error   (avalon_st_adapter_001_out_0_error),
-        .avalon_streaming_sink_1_valid   (avalon_st_adapter_001_out_0_valid),
-        .avalon_streaming_sink_1_ready   (avalon_st_adapter_001_out_0_ready)
+        .avalon_streaming_sink_1_channel (avalon_st_adapter_002_out_0_channel),
+        .avalon_streaming_sink_1_data    (avalon_st_adapter_002_out_0_data),
+        .avalon_streaming_sink_1_error   (avalon_st_adapter_002_out_0_error),
+        .avalon_streaming_sink_1_valid   (avalon_st_adapter_002_out_0_valid),
+        .avalon_streaming_sink_1_ready   (avalon_st_adapter_002_out_0_ready),
+        .avalon_streaming_source_1_data  (adc_fifo_avalon_streaming_source_1_data),
+        .avalon_streaming_source_1_valid (adc_fifo_avalon_streaming_source_1_valid)
     );
 
     soc_system_fifo_0 fifo_0 (
         .wrclock                 (clk),
         .reset_n                 (~reset),
-        .avalonst_sink_valid     (adc_fifo_avalon_streaming_source_valid),
-        .avalonst_sink_data      (adc_fifo_avalon_streaming_source_data),
-        .avalonst_sink_channel   (),
-        .avalonst_sink_error     (),
-        .avalonst_source_valid   (avalon_st_adapter_001_out_0_valid),
-        .avalonst_source_data    (avalon_st_adapter_001_out_0_data),
-        .avalonst_source_channel (avalon_st_adapter_001_out_0_channel),
-        .avalonst_source_error   (avalon_st_adapter_001_out_0_error)
+        .avalonst_sink_valid     (avalon_st_adapter_001_out_0_valid),
+        .avalonst_sink_data      (avalon_st_adapter_001_out_0_data),
+        .avalonst_sink_channel   (avalon_st_adapter_001_out_0_channel),
+        .avalonst_sink_error     (avalon_st_adapter_001_out_0_error),
+        .avalonmm_read_slave_readdata (mm_interconnect_4_fifo_0_out_readdata),
+        .avalonmm_read_slave_read     (mm_interconnect_4_fifo_0_out_read),
+        .avalonmm_read_slave_address  (mm_interconnect_4_fifo_0_out_address)
     );
 
     dsp dsp (
@@ -120,11 +131,11 @@ module top_testbench();
         .in_ready          (fifo_ready),
         .in_error          (),
         .in_channel        (),
-        .out_data          (avalon_st_adapter_001_out_0_data),
-        .out_valid         (avalon_st_adapter_001_out_0_valid),
-        .out_ready         (avalon_st_adapter_001_out_0_ready),
-        .out_error         (avalon_st_adapter_001_out_0_error),
-        .out_channel       (avalon_st_adapter_001_out_0_channel),
+        .out_data          (avalon_st_adapter_002_out_0_data),
+        .out_valid         (avalon_st_adapter_002_out_0_valid),
+        .out_ready         (avalon_st_adapter_002_out_0_ready),
+        .out_error         (avalon_st_adapter_002_out_0_error),
+        .out_channel       (avalon_st_adapter_002_out_0_channel),
         .almost_full_data  (),
         .almost_empty_data (),
         .in_startofpacket  (1'b0),
@@ -135,33 +146,29 @@ module top_testbench();
         .out_empty         ()
     );
 
-    // soc_system_avalon_st_adapter #(
-    //     .inBitsPerSymbol (32),
-    //     .inUsePackets    (0),
-    //     .inDataWidth     (32),
-    //     .inChannelWidth  (0),
-    //     .inErrorWidth    (0),
-    //     .inUseEmptyPort  (0),
-    //     .inUseValid      (1),
-    //     .inUseReady      (0),
-    //     .inReadyLatency  (0),
-    //     .outDataWidth    (32),
-    //     .outChannelWidth (8),
-    //     .outErrorWidth   (8),
-    //     .outUseEmptyPort (0),
-    //     .outUseValid     (1),
-    //     .outUseReady     (0),
-    //     .outReadyLatency (0)
-    // ) avalon_st_adapter (
-    //     .in_clk_0_clk   (clk),                      // in_clk_0.clk
-    //     .in_rst_0_reset (rst_controller_reset_out_reset),         // in_rst_0.reset
-    //     .in_0_data      (adc_fifo_avalon_streaming_source_data),  //     in_0.data
-    //     .in_0_valid     (adc_fifo_avalon_streaming_source_valid), //         .valid
-    //     .out_0_data     (avalon_st_adapter_out_0_data),           //    out_0.data
-    //     .out_0_valid    (avalon_st_adapter_out_0_valid),          //         .valid
-    //     .out_0_error    (avalon_st_adapter_out_0_error),          //         .error
-    //     .out_0_channel  (avalon_st_adapter_out_0_channel)         //         .channel
-    // );
+    soc_system_dma_0 dma_0 (
+        .clk                (clk),
+        .system_reset_n     (~reset),
+        .dma_ctl_address    (),
+        .dma_ctl_chipselect (),
+        .dma_ctl_readdata   (),
+        .dma_ctl_write_n    (),
+        .dma_ctl_writedata  (),
+        .dma_ctl_irq        (),
+        .read_address       (),
+        .read_chipselect    (),
+        .read_read_n        (mm_interconnect_4_fifo_0_out_read),
+        .read_readdata      (mm_interconnect_4_fifo_0_out_readdata),
+        .read_readdatavalid (),
+        .read_waitrequest   (),
+        .write_address      (mm_interconnect_4_fifo_0_out_address),
+        .write_chipselect   (),
+        .write_waitrequest  (),
+        .write_write_n      (),
+        .write_writedata    (),
+        .write_byteenable   ()
+    );
+
 
     initial begin
         forever #5 clk = ~clk;
