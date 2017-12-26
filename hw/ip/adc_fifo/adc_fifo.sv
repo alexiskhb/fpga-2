@@ -13,10 +13,11 @@ module adc_fifo (
         output reg         [31:0]  avalon_master_writedata,
 
         input wire                 avalon_slave_address,
+        input wire                 avalon_slave_chipselect,
         input wire                 avalon_slave_read,
         output reg         [31:0]  avalon_slave_readdata,
-        output reg                 avalon_slave_waitrequest,
         output reg                 avalon_slave_readdatavalid,
+        output reg                 avalon_slave_waitrequest,
 
         input wire                 avalon_streaming_sink_valid,
         input wire         [31:0]  avalon_streaming_sink_data,
@@ -31,10 +32,12 @@ module adc_fifo (
         output reg                 avalon_streaming_source_1_valid
     );
 
+
     reg [31:0] flag_in;
     reg [31:0] flag_out;
     reg [31:0] flag_event;
     reg        dma_event;
+
 
     always @ (posedge clk or posedge reset)
     begin
@@ -82,122 +85,40 @@ module adc_fifo (
     begin
         if (reset) begin
             flag_out <= 0;
-            // avalon_slave_readdata <= 0;
             avalon_master_address <= 4;
             avalon_master_writedata <= 4;
             avalon_master_write <= 1'b1;
             avalon_streaming_source_1_valid <= 0;
             avalon_streaming_source_1_data <= 0;
+            avalon_slave_readdatavalid <= 1'b0;
+            avalon_slave_waitrequest <= 1'b0;
         end else begin
-            // if (flag_in == 4 && flag_out == 0) begin
-            //     avalon_streaming_source_1_data <= 32'd123;
-            //     avalon_streaming_source_1_valid <= 1;
-            //     flag_out <= 3;
-            // end else if (flag_out == 3) begin
-            //     avalon_streaming_source_1_data <= 32'd1489;
-            //     flag_out <= 4;
-            // end else if (flag_out == 4) begin
-            //     flag_out <= 17;
-            //     avalon_streaming_source_1_valid <= 0;
-            // end
-
             avalon_master_write <= 1'b0;
-            if (flag_in == 4 && flag_out == 0) begin
-                flag_out <= 3;
-            end else if (flag_out == 3) begin
+            if (flag_in == 5 && flag_out == 0 && avalon_streaming_sink_1_valid == 1'b1
+                    && avalon_slave_chipselect == 1'b1) begin
                 avalon_streaming_sink_1_ready <= 1'b1;
-                avalon_streaming_source_1_valid <= 1;
                 flag_out <= 4;
-            end else if (flag_out == 4 & avalon_streaming_sink_1_valid == 1'b1) begin
-                avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
+            end else if (flag_out == 4) begin
+                avalon_slave_readdatavalid <= 1'b1;
+                avalon_slave_readdata <= avalon_streaming_sink_1_data;
                 flag_out <= 5;
             end else if (flag_out == 5) begin
-                avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
+                avalon_slave_readdata <= avalon_streaming_sink_1_data;
                 flag_out <= 6;
             end else if (flag_out == 6) begin
-                avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
+                avalon_slave_readdata <= avalon_streaming_sink_1_data;
                 flag_out <= 7;
             end else if (flag_out == 7) begin
-                avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
+                avalon_slave_readdata <= avalon_streaming_sink_1_data;
                 flag_out <= 8;
             end else if (flag_out == 8) begin
                 avalon_streaming_sink_1_ready <= 1'b0;
-                avalon_streaming_source_1_valid <= 0;
+                avalon_slave_readdatavalid <= 1'b0;
+                flag_out <= 9;
+            end else if (flag_out == 9) begin
                 flag_out <= 17;
             end
-            // if (flag_out == 0) begin
-            //     avalon_slave_readdata <= 32'd4294967295;
-            //     flag_out <= 4;
-            // end else if (avalon_slave_read == 1'b1 && flag_out == 4) begin
-            //     avalon_slave_readdata <= 32'd4261148655;
-            //     flag_out <= 5;
-            // end else if (flag_out == 5) begin
-            //     avalon_slave_readdata <= 32'd0;
-            //     flag_out <= 17;
-            // end
         end
     end
-
-    // reg [31:0] cntr;
-    // reg [7:0] state;
-    // parameter WAITE     = 8'd0
-    //         , FILL      = 8'd1
-    //         , TO_DMA    = 8'd2
-    //         , END       = 8'd3
-    //         , DMA_EVENT = 32'd123
-    //         , SIZE      = 32'd256;
-
-    // always @ (posedge clk or posedge reset)
-    // begin
-    //     if (reset) begin
-    //         cntr <= 0;
-    //     end else begin
-    //         if (cntr < SIZE & state == FILL) begin
-    //             cntr <= cntr + 1;
-    //         end else if (cntr > 0 & state == TO_DMA) begin
-    //             cntr <= cntr - 1;
-    //         end
-    //     end
-    // end
-
-    // wire dma_event;
-    // assign dma_event = (avalon_streaming_sink_valid == 1'b1 && avalon_streaming_sink_data == DMA_EVENT) ? 1'b1 : 0'b0;
-
-    // always @ (posedge clk or posedge reset)
-    // begin
-    //     if (reset) begin
-    //         state                           <= WAITE;
-    //         avalon_master_address           <= 4;
-    //         avalon_master_writedata         <= 3;
-    //         avalon_master_write             <= 1'b1;
-    //         avalon_streaming_source_1_valid <= 0;
-    //         avalon_streaming_source_1_data  <= 0;
-    //         avalon_streaming_source_data    <= 0;
-    //         avalon_streaming_source_valid   <= 0;
-    //     end else begin
-    //         case (state)
-    //             WAITE:
-    //                 if (dma_event) begin
-    //                     state <= FILL;
-    //                 end
-    //             FILL:
-    //                 if (cntr < SIZE) begin
-    //                     avalon_streaming_source_valid <= 1;
-    //                     avalon_streaming_source_data <= cntr;
-    //                 end else begin
-    //                     avalon_streaming_source_valid <= 0;
-    //                     state <= TO_DMA;
-    //                 end
-    //             TO_DMA:
-    //                 if (cntr > 32'd0) begin
-    //                     avalon_streaming_sink_1_ready = 1'b1;
-    //                     avalon_streaming_source_1_valid <= 1;
-    //                     avalon_streaming_source_1_data <= avalon_streaming_sink_1_data;
-    //                 end else begin
-    //                     state <= END;
-    //                 end
-    //         endcase
-    //     end
-    // end
 
 endmodule
