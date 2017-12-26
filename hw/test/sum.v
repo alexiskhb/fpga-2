@@ -50,6 +50,7 @@ module top_testbench();
         .avalon_slave_readdata           (),
         .avalon_slave_read               (),
         .avalon_slave_waitrequest        (),
+        .avalon_slave_readdatavalid      (),
         .avalon_streaming_sink_valid     (dsp_avalon_streaming_source_valid),
         .avalon_streaming_sink_data      (dsp_avalon_streaming_source_data),
         .avalon_streaming_sink_1_channel (avalon_st_adapter_002_out_0_channel),
@@ -57,21 +58,21 @@ module top_testbench();
         .avalon_streaming_sink_1_error   (avalon_st_adapter_002_out_0_error),
         .avalon_streaming_sink_1_valid   (avalon_st_adapter_002_out_0_valid),
         .avalon_streaming_sink_1_ready   (avalon_st_adapter_002_out_0_ready),
-        .avalon_streaming_source_1_data  (adc_fifo_avalon_streaming_source_1_data),
-        .avalon_streaming_source_1_valid (adc_fifo_avalon_streaming_source_1_valid)
+        .avalon_streaming_source_1_data  (),
+        .avalon_streaming_source_1_valid ()
     );
 
-    soc_system_fifo_0 fifo_0 (
-        .wrclock                 (clk),
-        .reset_n                 (~reset),
-        .avalonst_sink_valid     (avalon_st_adapter_001_out_0_valid),
-        .avalonst_sink_data      (avalon_st_adapter_001_out_0_data),
-        .avalonst_sink_channel   (avalon_st_adapter_001_out_0_channel),
-        .avalonst_sink_error     (avalon_st_adapter_001_out_0_error),
-        .avalonmm_read_slave_readdata (mm_interconnect_4_fifo_0_out_readdata),
-        .avalonmm_read_slave_read     (mm_interconnect_4_fifo_0_out_read),
-        .avalonmm_read_slave_address  (mm_interconnect_4_fifo_0_out_address)
-    );
+    // soc_system_fifo_0 fifo_0 (
+    //     .wrclock                 (clk),
+    //     .reset_n                 (~reset),
+    //     .avalonst_sink_valid     (avalon_st_adapter_001_out_0_valid),
+    //     .avalonst_sink_data      (avalon_st_adapter_001_out_0_data),
+    //     .avalonst_sink_channel   (avalon_st_adapter_001_out_0_channel),
+    //     .avalonst_sink_error     (avalon_st_adapter_001_out_0_error),
+    //     .avalonmm_read_slave_readdata (mm_interconnect_4_fifo_0_out_readdata),
+    //     .avalonmm_read_slave_read     (mm_interconnect_4_fifo_0_out_read),
+    //     .avalonmm_read_slave_address  (mm_interconnect_4_fifo_0_out_address)
+    // );
 
     dsp dsp (
         .streaming_sink_data    (),
