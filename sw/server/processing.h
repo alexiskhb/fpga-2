@@ -7,5 +7,7 @@
 
 #include <vector>
 
-void process_ping_guilbert(const unsigned short* data, const int blocks_num, const int block_size, 
-                           unsigned short* data_out, const float threshold, std::vector<std::pair<short, short>>& spectra_out);
+typedef int data_type;
+
+void process_ping_guilbert(const data_type* data, const int blocks_num, const int block_size, 
+                           data_type* data_out, const float threshold, std::vector<std::pair<data_type, data_type>>& spectra_out);

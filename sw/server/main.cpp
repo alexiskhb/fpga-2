@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <sstream>
 #include <fcntl.h>
 #include <string>
@@ -26,7 +27,6 @@ int upperpow2(int k) {
 
 class Pinger {
 public:
-    using datatype = uint16_t;
     Pinger(int freq/*kHz*/, int pulse_len/*ms*/, int amplitude, int detalization) : 
         freq(freq), pulse_len(pulse_len), detl(detalization), ampl(amplitude)
     {
@@ -41,7 +41,7 @@ public:
             "\nblock size: " << block_size << std::endl;
     }
 
-    std::vector<datatype> generate(std::vector<float> distances/*meters*/) 
+    std::vector<data_type> generate(std::vector<float> distances/*meters*/) 
     {
         float min_dist = distances.front();
         for (int d: distances) {
@@ -50,7 +50,7 @@ public:
             }
         }
         int blocks_num = distances.size();
-        std::vector<datatype> result(block_size * blocks_num);
+        std::vector<data_type> result(block_size * blocks_num);
         m_generate_data(block_size, delta);
         for (int i = 0; i < blocks_num; i++) {
             m_generate_impl(result.begin() + block_size*i, distances[i] - min_dist);
@@ -58,7 +58,7 @@ public:
         return result;
     }
 public:
-    void m_generate_impl(const std::vector<datatype>::iterator begin, float dist)
+    void m_generate_impl(const std::vector<data_type>::iterator begin, float dist)
     {
         float speed_of_sound = 1468.5;
         int shift = (dist/delta)/speed_of_sound;
@@ -77,7 +77,7 @@ public:
     }
     int freq, pulse_len, detl, ampl, periods, block_size;
     float delta;
-    std::vector<datatype> data;
+    std::vector<data_type> data;
 };
 
 class Driver 
@@ -88,10 +88,14 @@ public:
         // ioctl(fd, cmd, reinterpret_cast<char*>(data));
     }
 
-    int recv(int cmd, const std::vector<float>& distances, std::vector<ushort>& out_data) 
+    int recv(int cmd, std::vector<data_type>& out_data, int blocks_num) 
     {
-        // out_data = pinger.generate(distances);
-        return distances.size();
+        int buf_len = 512;
+        int buf[buf_len];
+        read(ham_driver, buf, buf_len);
+        out_data.resize(blocks_num*upperpow2(buf_len));
+        std::copy(buf, buf + buf_len, out_data.begin());
+        return blocks_num;
     }
 
     bool is_ready() 
@@ -101,15 +105,15 @@ public:
 
     bool init(const char* name) 
     {
-        fd = open(name, O_RDWR);
-        if (fd < 0) {
+        ham_driver = open(name, O_RDWR);
+        if (ham_driver < 0) {
             std::cerr << "failed open ham device" << std::endl;
             // return false;
         }
         return true;
     }
 private:
-    int fd;
+    int ham_driver;
 };
 
 Driver driver;
@@ -120,7 +124,7 @@ public:
     WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024)
     {}
 private:
-    unsigned short data[4];
+    data_type data[4];
     float d1 = 0, d2 = 0, d3 = 0, d4 = 0, threshold = 0.5;
     int slice_beg = 0, slice_end = 250, frequency = 20, pulse_len = 1, detalization = 30;
 private:
@@ -139,9 +143,10 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
-            std::vector<uint16_t> data = Pinger{frequency, pulse_len, 100, detalization}.generate({d1, d2, d3, d4});
-            std::vector<std::pair<short, short>> spectra;
-            unsigned short delays[4];
+            std::vector<data_type> data;// = Pinger{frequency, pulse_len, 100, detalization}.generate({d1, d2, d3, d4});
+            driver.recv(0, data, 4);
+            std::vector<std::pair<data_type, data_type>> spectra;
+            data_type delays[4];
             int blocks_num = 4;
             int block_size = data.size()/blocks_num;
             process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, spectra);
