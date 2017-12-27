@@ -35,25 +35,41 @@ module adc_fifo (
     reg [31:0] flag_in;
     reg [31:0] flag_out;
 
-    reg [31:0] cntr;
+    reg [31:0] cntr_in;
+    reg [31:0] cntr_out;
     reg [7:0] state;
+
     parameter WAITE     = 8'd0
             , FILL      = 8'd1
-            , SETUP_DMA = 8'd2
-            , TO_DMA    = 8'd3
-            , END       = 8'd4
+            , FULL      = 8'd2
+            , POP       = 8'd3
+            , PUSH      = 8'd4
+            , SETUP_DMA = 8'd5
+            , TO_DMA    = 8'd6
+            , END       = 8'd7
             , DMA_EVENT = 32'd123
-            , SIZE      = 32'd256;
+            , SIZE_FIFO = 32'd256
+            , SIZE_IN   = 32'd300
+            , SIZE_OUT  = 32'd256;
 
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
-            cntr <= 0;
+            cntr_in <= 0;
         end else begin
-            if (cntr < SIZE & state == FILL) begin
-                cntr <= cntr + 1;
-            end else if (cntr > 0 & state == TO_DMA) begin
-                cntr <= cntr - 1;
+            if (cntr_in < SIZE_IN && (state == FILL || state == PUSH)) begin
+                cntr_in <= cntr_in + 1;
+            end
+        end
+    end
+
+    always @ (posedge clk or posedge reset)
+    begin
+        if (reset) begin
+            cntr_out <= SIZE_OUT;
+        end else begin
+            if (cntr_out > 0 && state == TO_DMA) begin
+                cntr_out <= cntr_out - 1;
             end
         end
     end
@@ -66,7 +82,7 @@ module adc_fifo (
         if (reset) begin
             state                           <= WAITE;
             avalon_master_address           <= 4;
-            avalon_master_writedata         <= SIZE;
+            avalon_master_writedata         <= SIZE_FIFO;
             avalon_master_write             <= 1'b1;
             avalon_streaming_source_1_valid <= 0;
             avalon_streaming_source_1_data  <= 0;
@@ -84,12 +100,33 @@ module adc_fifo (
                         end
                     end
                 FILL:
-                    if (cntr < SIZE) begin
+                    if (cntr_in < SIZE_FIFO) begin
                         avalon_streaming_source_valid <= 1'b1;
-                        avalon_streaming_source_data <= cntr;
+                        avalon_streaming_source_data <= cntr_in;
                     end else begin
                         avalon_streaming_source_valid <= 1'b0;
-                        state <= SETUP_DMA;
+                        state <= FULL;
+                    end
+                FULL:
+                    begin
+                        avalon_streaming_source_valid <= 1'b0;
+                        if (cntr_in > SIZE_FIFO && cntr_in < SIZE_IN) begin
+                            state  <= POP;
+                        end else begin
+                            state <= SETUP_DMA;
+                        end
+                    end
+                POP:
+                    begin
+                        avalon_streaming_sink_1_ready <= 1'b1;
+                        state <= PUSH;
+                    end
+                PUSH:
+                    begin
+                        avalon_streaming_sink_1_ready <= 1'b0;
+                        avalon_streaming_source_valid <= 1'b1;
+                        avalon_streaming_source_data <= cntr_in;
+                        state <= FULL;
                     end
                 SETUP_DMA:
                     if (avalon_streaming_sink_1_valid == 1'b1 && avalon_slave_chipselect == 1'b1) begin
@@ -97,7 +134,7 @@ module adc_fifo (
                         state <= TO_DMA;
                     end
                 TO_DMA:
-                    if (cntr > 32'd0) begin
+                    if (cntr_out > 32'd0) begin
                         avalon_slave_readdatavalid <= 1'b1;
                         avalon_slave_readdata <= avalon_streaming_sink_1_data;
                     end else begin
