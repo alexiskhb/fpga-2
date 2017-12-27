@@ -2,8 +2,8 @@
 #include <cmath>
 #include "processing.h"
 
-void process_ping_guilbert(const unsigned short* data, const int blocks_num, const int block_size, 
-                           unsigned short* data_out, const float threshold, std::vector<std::pair<short, short>>& spectra_out)
+void process_ping_guilbert(const data_type* data, const int blocks_num, const int block_size, 
+                           data_type* data_out, const float threshold, std::vector<std::pair<data_type, data_type>>& spectra_out)
 {
     float out[blocks_num][block_size];
     fftw_complex in_complex[blocks_num][block_size], out_complex[blocks_num][block_size];
@@ -48,7 +48,7 @@ void process_ping_guilbert(const unsigned short* data, const int blocks_num, con
         }
         
         data_out[i] = 0;
-        for (short int j = block_size / 4; j < block_size; ++j) {
+        for (int j = 0/*block_size / 4*/; j < block_size; ++j) {
             if (fabs(out[i][j]) > threshold * max_n) {
                 data_out[i] = j;
                 break;
