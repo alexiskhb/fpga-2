@@ -26,7 +26,7 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
 	# specify arm gcc here
 	# use the same gcc to build fastcgipp lib
     set(triple /usr/bin/gcc-linaro-5.4.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-)
-    set(TARGET_FILES main.cpp)
+    set(TARGET_FILES main.cpp processing.cpp)
 	set(CMAKE_C_LINK_EXECUTABLE ${triple}ld)
 	set(CMAKE_CXX_COMPILER ${triple}g++)
 	set(CMAKE_CC_COMPILER ${triple}gcc)

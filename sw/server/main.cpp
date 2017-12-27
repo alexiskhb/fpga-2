@@ -92,9 +92,14 @@ public:
     {
         int buf_len = 512;
         int buf[buf_len];
-        read(ham_driver, buf, buf_len);
+        int result = read(ham_driver, buf, 256);
+        std::cout << result << std::endl;
         out_data.resize(blocks_num*upperpow2(buf_len));
         std::copy(buf, buf + buf_len, out_data.begin());
+        for (int i = 0; i < buf_len; i++) {
+            std::cout << buf[i] << ' ';
+        }
+        std::cout << std::endl;
         return blocks_num;
     }
 
@@ -108,7 +113,7 @@ public:
         ham_driver = open(name, O_RDWR);
         if (ham_driver < 0) {
             std::cerr << "failed open ham device" << std::endl;
-            // return false;
+            return false;
         }
         return true;
     }
@@ -181,7 +186,7 @@ private:
 
 int main(int argc, char** argv)
 {
-    // driver.init();
+    driver.init(DEVICE_NAME);
     Fastcgipp::Manager<WebClientRequest> manager;
     manager.setupSignals();
     manager.listen("127.0.0.1", argc > 1 ? argv[1] : "8000");

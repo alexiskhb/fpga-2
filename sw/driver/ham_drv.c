@@ -48,7 +48,7 @@ enum DmaRegisters
     CONTROL
 };
 
-#define DMA_BUFFER_SIZE 16 
+#define DMA_BUFFER_SIZE 1024 
 
 
 static void *ham_drv_mem = NULL;
@@ -111,6 +111,18 @@ static void ham_drv_dma_print_data(void)
     }
 }
 
+static ssize_t ham_drv_read(struct file *filep, char __user *out_buffer, size_t count, loff_t *offset)
+{
+    int buffer[DMA_BUFFER_SIZE / 4];
+    for (int i = 0; i < DMA_BUFFER_SIZE / 4; ++i) {
+        buffer[i] = i;
+    }
+    if (copy_to_user(out_buffer, buffer, DMA_BUFFER_SIZE)) {
+        return -EINVAL;
+    }
+    return DMA_BUFFER_SIZE;
+}
+
 static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     switch (cmd) {
@@ -124,6 +136,7 @@ static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long ar
 
 static const struct file_operations ham_drv_fops = {
     .owner = THIS_MODULE,
+    .read  = ham_drv_read,
     .unlocked_ioctl = ham_drv_ioctl,
     .llseek = no_llseek,
 };
