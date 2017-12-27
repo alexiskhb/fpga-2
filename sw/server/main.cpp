@@ -27,7 +27,7 @@ int upperpow2(int k) {
 class Pinger {
 public:
     using datatype = uint16_t;
-    Pinger(int freq/*kHz*/, int pulse_len/*ms*/, int amplitude = 100, int detalization = 30) : 
+    Pinger(int freq/*kHz*/, int pulse_len/*ms*/, int amplitude, int detalization) : 
         freq(freq), pulse_len(pulse_len), detl(detalization), ampl(amplitude)
     {
         this->delta = 1.0 / (1000 * freq * detl);
@@ -146,25 +146,27 @@ private:
             int block_size = data.size()/blocks_num;
             process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, spectra);
             out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3] << "|";
+            int cycle_slice_beg = std::max(slice_beg, 0);
+            int cycle_slice_end = std::min(slice_end, block_size);
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
-                for (int i = slice_beg; i < slice_end - 1; ++i) {
+                for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
                     out << '[' << i << ',' << data[k*block_size + i] << "],"; 
                 }
-                out << '[' << slice_end - 1 << ',' << data[k*block_size + slice_end - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
+                out << '[' << cycle_slice_end - 1 << ',' << data[k*block_size + cycle_slice_end - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
             }
             out << "|";
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
-                for (int i = slice_beg; i < slice_end - 1; ++i) {
+                for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
                     out << '[' << i << ',' << spectra[k*block_size + i].first << "],"; 
                 }
-                out << '[' << slice_end - 1 << ',' << spectra[k*block_size + slice_end - 1].first << "]],[";
+                out << '[' << cycle_slice_end - 1 << ',' << spectra[k*block_size + cycle_slice_end - 1].first << "]],[";
 
-                for (int i = slice_beg; i < slice_end - 1; ++i) {
+                for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
                     out << '[' << i << ',' << spectra[k*block_size + i].second << "],"; 
                 }
-                out << '[' << slice_end - 1 << ',' << spectra[k*block_size + slice_end - 1].second << (k < blocks_num - 1 ? "]]];" : "]]]");
+                out << '[' << cycle_slice_end - 1 << ',' << spectra[k*block_size + cycle_slice_end - 1].second << (k < blocks_num - 1 ? "]]];" : "]]]");
             }
         }
 
