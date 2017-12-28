@@ -2,7 +2,7 @@
 module adc_fifo (
         input wire                 clk,
         input wire                 reset,
-        output reg         [31:0]  avalon_streaming_source_data,
+        output reg         [15:0]  avalon_streaming_source_data,
         output reg                 avalon_streaming_source_valid,
 
         output reg         [31:0]  avalon_master_address,
@@ -15,14 +15,14 @@ module adc_fifo (
         input wire                 avalon_slave_address,
         input wire                 avalon_slave_chipselect,
         input wire                 avalon_slave_read,
-        output reg         [31:0]  avalon_slave_readdata,
+        output reg         [15:0]  avalon_slave_readdata,
         output reg                 avalon_slave_readdatavalid,
         output reg                 avalon_slave_waitrequest,
 
         input wire                 avalon_streaming_sink_valid,
         input wire         [31:0]  avalon_streaming_sink_data,
 
-        input wire         [31:0]  avalon_streaming_sink_1_data,
+        input wire         [15:0]  avalon_streaming_sink_1_data,
         input wire         [7:0]   avalon_streaming_sink_1_channel,
         input wire         [7:0]   avalon_streaming_sink_1_error,
         input wire                 avalon_streaming_sink_1_valid,
