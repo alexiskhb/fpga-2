@@ -26,7 +26,7 @@
 #define DMA_CONTROL_REG_OFFSET         (DMA_MODULE_OFFSET + 24)
 
 #define DMA_CONTROL_REG_BIT_BYTE          (1 << 0)
-#define DMA_CONTROL_REG_BIT_HALFWWORD     (1 << 1)
+#define DMA_CONTROL_REG_BIT_HALFWORD      (1 << 1)
 #define DMA_CONTROL_REG_BIT_WORD          (1 << 2)
 #define DMA_CONTROL_REG_BIT_GO            (1 << 3)
 #define DMA_CONTROL_REG_BIT_INTERRUPT     (1 << 4)
@@ -48,7 +48,7 @@ enum DmaRegisters
     CONTROL
 };
 
-#define DMA_BUFFER_SIZE 1024 
+#define DMA_BUFFER_SIZE 512 
 
 
 static void *ham_drv_mem = NULL;
@@ -115,7 +115,7 @@ static void ham_drv_dma_print_data(void)
 static ssize_t ham_drv_read(struct file *filep, char __user *out_buffer, size_t count, loff_t *offset)
 {
     int *buffer_int = (int *)buffer;
-    for (int i = 0; i < DMA_BUFFER_SIZE / 4; ++i) {
+    for (int i = 0; i < DMA_BUFFER_SIZE / 2; ++i) {
         if ((buffer_int[i] & 0x00001000) == 0x00001000) {
             buffer_int[i] = ~(buffer_int[i] ^ 0x00001000) + 1;
         }
@@ -150,7 +150,7 @@ static irqreturn_t ham_drv_interrupt(int irq, void *dev_id)
     if (irq != INTERRUPT_NUM) {
         return IRQ_NONE;
     }
-    ham_drv_dma_write_reg(DMA_CONTROL_REG_BIT_WORD | DMA_CONTROL_REG_BIT_LEEN, CONTROL);
+    ham_drv_dma_write_reg(DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_LEEN, CONTROL);
     ham_drv_dma_print_registers();
     ham_drv_dma_write_reg(0, STATUS);
     return IRQ_HANDLED;
@@ -205,7 +205,7 @@ static int __init ham_drv_init(void)
     }
 
     ham_drv_dma_print_registers();
-    unsigned int control_reg = DMA_CONTROL_REG_BIT_WORD | DMA_CONTROL_REG_BIT_INTERRUPT | DMA_CONTROL_REG_BIT_LEEN;
+    unsigned int control_reg = DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_INTERRUPT | DMA_CONTROL_REG_BIT_LEEN;
     ham_drv_dma_write_reg(control_reg, CONTROL);
 
     ham_drv_dma_print_registers();
