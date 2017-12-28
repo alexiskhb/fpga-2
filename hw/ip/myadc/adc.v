@@ -90,9 +90,10 @@ begin
     end 
     else if (~measure_start & ~wait_measure_done)
     begin
-        measure_ch <= measure_ch + 1;
-        if (measure_ch >= 3'd3) begin
+        if (measure_ch == 3'd2) begin
             measure_ch <= 3'd0;
+        end else begin
+            measure_ch <= measure_ch + 1;
         end
         measure_start <= 1'b1;
         wait_measure_done <= 1'b1;
