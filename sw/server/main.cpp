@@ -88,9 +88,11 @@ public:
         // ioctl(fd, cmd, reinterpret_cast<char*>(data));
     }
 
-    int recv(int cmd, std::vector<data_type>& out_data, int blocks_num) 
+    int recv(int cmd, std::vector<data_type>& out_data) 
     {
-        int buf_len = 256;
+        int blocks_num = 3;
+        int block_size = 1024;
+        int buf_len = block_size*blocks_num;
         data_type buf[buf_len];
         int result = read(ham_driver, buf, buf_len * sizeof(data_type));
         for (int i = 0; i < buf_len; ++i) {
@@ -99,8 +101,13 @@ public:
             }
         }
         std::cout << result << std::endl;
-        out_data.resize(blocks_num*upperpow2(buf_len));
-        std::copy(buf, buf + buf_len, out_data.begin());
+        out_data.resize(buf_len);
+
+        for (int i = 0; i < buf_len; i += blocks_num) {
+            out_data[0*block_size + i/blocks_num] = buf[i];
+            out_data[1*block_size + i/blocks_num] = buf[i + 1];
+            out_data[2*block_size + i/blocks_num] = buf[i + 2];
+        }
         for (int i = 0; i < buf_len; i++) {
             std::cout << buf[i] << ' ';
         }
@@ -153,16 +160,26 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
-            std::vector<data_type> data;// = Pinger{frequency, pulse_len, 100, detalization}.generate({d1, d2, d3, d4});
-            driver.recv(0, data, 4);
-            std::vector<std::pair<data_type, data_type>> spectra;
-            data_type delays[4];
-            int blocks_num = 4;
+            std::vector<data_type> data;
+            int blocks_num = driver.recv(0, data);
             int block_size = data.size()/blocks_num;
+
+            std::vector<std::pair<data_type, data_type>> spectra;
+            data_type delays[blocks_num];
             process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, spectra);
-            out << delays[0] << ';' << delays[1] << ';' << delays[2] << ';' << delays[3] << "|";
+            
+            // Order of output matters.
+            // Don't change it
+            // 0;1;2;3|[...
+            for (int i = 0; i < blocks_num; i++) {
+                out << delays[i] << (i < blocks_num - 1 ? ';' : '|');
+            }
             int cycle_slice_beg = std::max(slice_beg, 0);
             int cycle_slice_end = std::min(slice_end, block_size);
+            // Output data in JSON format:
+            // [[[0,1],[2,3],...]];[[[6,7],...]];...;[[[8,9],...]]|[[[10, 11],...]],...
+            //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^^
+            //                 left charts                        |    right charts
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
                 for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {

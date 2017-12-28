@@ -48,7 +48,7 @@ enum DmaRegisters
     CONTROL
 };
 
-#define DMA_BUFFER_SIZE 512 
+#define DMA_BUFFER_SIZE 1024 * 3 * 2 
 
 
 static void *ham_drv_mem = NULL;
