@@ -44,5 +44,7 @@ hw/hps_isw_handoff/
 hw/soc_system/
 hw/stamp/
 hw/software/
+hw/soc_system.qsf
+hw/soc_system.sld
 
 sw/server/build

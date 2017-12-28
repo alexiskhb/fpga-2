@@ -16,6 +16,7 @@ module adc(
     //avalon stream port
     streaming_source_data,
     streaming_source_valid,
+    streaming_source_channel,
     
     adc_clk, // max 40mhz
     // adc interface
@@ -35,6 +36,7 @@ output    reg             [15:0]        slave_readdata;
 
 output    reg signed      [12:0]        streaming_source_data;
 output    reg                           streaming_source_valid;
+output    reg             [2:0]         streaming_source_channel;
 
 
 input                                   adc_clk;
@@ -64,6 +66,7 @@ begin
         if(measure_done) begin
             streaming_source_valid <= 1'b1;
             streaming_source_data <= {1'b0, measure_dataread} - 12'h800;
+            streaming_source_channel <= measure_ch;
         end else begin
             streaming_source_valid <= 1'b0;
         end
@@ -75,7 +78,7 @@ end
 
 reg wait_measure_done = 1'b0;
 reg measure_start = 1'b0;
-reg [2:0] measure_ch = 3'h0;
+reg [2:0] measure_ch = 3'd0;
 
 always @ (posedge adc_clk or posedge slave_reset)    
 begin
@@ -83,9 +86,14 @@ begin
     begin
         measure_start <= 1'b0;
         wait_measure_done <= 1'b0;
+        measure_ch <= 3'd0;
     end 
     else if (~measure_start & ~wait_measure_done)
     begin
+        measure_ch <= measure_ch + 1;
+        if (measure_ch >= 3'd3) begin
+            measure_ch <= 3'd0;
+        end
         measure_start <= 1'b1;
         wait_measure_done <= 1'b1;
     end

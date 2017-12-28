@@ -32,7 +32,8 @@ module adc_fifo (
         output reg                 avalon_streaming_source_1_valid,
 
         input wire         [12:0]  avalon_ss_adc_data,
-        input wire                 avalon_ss_adc_valid
+        input wire                 avalon_ss_adc_valid,
+        input wire         [2:0]   avalon_ss_adc_channel
     );
 
     reg [31:0] flag_in;
@@ -51,7 +52,7 @@ module adc_fifo (
             , TO_DMA    = 8'd6
             , END       = 8'd7
             , DMA_EVENT = 32'd123
-            , SIZE_FIFO = 32'd256;
+            , SIZE_FIFO = 32'd3072;
 
     always @ (posedge clk or posedge reset)
     begin
