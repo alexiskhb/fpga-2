@@ -10,7 +10,46 @@
         <style>
             .chartField {
                 width: 100%;
-                height: 128px;
+                height: 120px;
+            }
+            td div {
+                border: 0;
+                width: auto;
+                height: auto;
+                min-height: 20px;
+                min-width: 20px;
+            }
+            .resizeableDiv {
+                /*max-width:100%;*/
+                /*max-height:100%;*/
+                resize: both;
+                overflow: auto;
+                /*vertical-align: super;*/
+                /*width:auto;*/
+                /*height: auto;*/
+                /*margin-top:auto;*/
+                width: 480px;
+                height: 120px;
+                /*position: relative;*/
+                /*left: 0;*/
+                /*top: 0;*/
+                /*margin: 0px;*/
+                /*padding: 0px;*/
+                /*border: 1px solid black;*/
+                /*border: 1px solid black;*/
+                display:block;
+            }
+            .resizeableTable {
+                /*width: 100%;*/
+                /*height:100%; */
+                /*border-collapse: collapse;*/
+                /*border-spacing: 0px;*/
+            }
+            .resizeabletd {
+                /*border: 1px solid black;*/
+                padding: 0;
+                margin: 0px;
+                overflow: auto;
             }
         </style>
     </head>
@@ -58,26 +97,26 @@
             </div>
         </div>
         <div class="chartContainer">
-        <table width="100%" height="100%">
+        <table class="resizeableTable">
             <tr>
-                <td><div id="chart00" class="chartField"></div></td>
-                <td><div id="chart01" class="chartField"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart00"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart01"></div></td>
             </tr>
             <tr>
-                <td><div id="chart10" class="chartField"></div></td>
-                <td><div id="chart11" class="chartField"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart10"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart11"></div></td>
             </tr>
             <tr>
-                <td><div id="chart20" class="chartField"></div></td>
-                <td><div id="chart21" class="chartField"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart20"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart21"></div></td>
             </tr>
             <tr>
-                <td><div id="chart30" class="chartField"></div></td>
-                <td><div id="chart31" class="chartField"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart30"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart31"></div></td>
             </tr>
             <tr>
-                <td><div id="chart40" class="chartField"></div></td>
-                <td><div id="chart41" class="chartField"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart40"></div></td>
+                <td class="resizeabletd"><div class="resizeableDiv" id="chart41"></div></td>
             </tr>
         </table>
         </div>

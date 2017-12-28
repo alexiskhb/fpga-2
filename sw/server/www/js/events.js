@@ -9,6 +9,8 @@ function to_byte_str_32(num) {
     return arr;
 }
 
+var plots = [];
+
 $(document).ready(function() {
     $("#set_mask_button").click(function() {
         let num = parseInt($('#mask_edit').val());
@@ -72,7 +74,6 @@ $(document).ready(function() {
             },
             xaxis: {
                 tickDecimals: 1,
-                tickSize: 5
             },
             colors: ["#0022FF"]
         }, {
@@ -85,7 +86,6 @@ $(document).ready(function() {
             },
             xaxis: {
                 tickDecimals: 1,
-                tickSize: 5
             },
         }];
 
@@ -99,9 +99,17 @@ $(document).ready(function() {
                 document.getElementById('result2').innerHTML = delays;
                 result[1] = result[1].split(';');
                 result[2] = result[2].split(';');
-                for (var i = 0; i < result[1].length; i++) {
-                    for (var j = 0; j < 2; j++) {
-                        $.plot(("#chart" + i) + j, JSON.parse(result[j + 1][i]), options[j]);
+                chartRows = result[1].length;
+                chartCols = 2;
+                for (var i = 0; i < chartRows; i++) {
+                    for (var j = 0; j < chartCols; j++) {
+                        if (plots.length < chartCols*chartRows) {
+                            plots.push(0);
+                        }
+                        // let wdth = $(("#chart" + i) + j).width();
+                        let dt = JSON.parse(result[j + 1][i]);
+                        // let x = dt[0][dt[0].length - 1][0] - dt[0][0][0];
+                        plots[i*chartCols + j] = $.plot(("#chart" + i) + j, dt, options[j]);
                     }
                 }
             }
@@ -114,5 +122,17 @@ $(document).ready(function() {
 
     $(window).on("load", function(e) {
         start();
+    });
+
+    $(window).resize(function() {
+        
+    });
+
+    $(".resizeableDiv").mouseup(function() {
+        for (var i = 0; i < plots.length; i++) {
+            plots[i].resize();
+            plots[i].setupGrid();
+            plots[i].draw();
+        }
     });
 });
