@@ -114,12 +114,6 @@ static void ham_drv_dma_print_data(void)
 
 static ssize_t ham_drv_read(struct file *filep, char __user *out_buffer, size_t count, loff_t *offset)
 {
-    int *buffer_int = (int *)buffer;
-    for (int i = 0; i < DMA_BUFFER_SIZE / 2; ++i) {
-        if ((buffer_int[i] & 0x00001000) == 0x00001000) {
-            buffer_int[i] = ~(buffer_int[i] ^ 0x00001000) + 1;
-        }
-    }
     if (copy_to_user(out_buffer, buffer, DMA_BUFFER_SIZE)) {
         return -EINVAL;
     }

@@ -6,8 +6,9 @@
 #define TAIL_LENGTH         2
 
 #include <vector>
+#include <cstdint>
 
-typedef int data_type;
+typedef int16_t data_type;
 
 void process_ping_guilbert(const data_type* data, const int blocks_num, const int block_size, 
                            data_type* data_out, const float threshold, std::vector<std::pair<data_type, data_type>>& spectra_out);

@@ -90,9 +90,14 @@ public:
 
     int recv(int cmd, std::vector<data_type>& out_data, int blocks_num) 
     {
-        int buf_len = 512;
-        int buf[buf_len];
-        int result = read(ham_driver, buf, 256);
+        int buf_len = 256;
+        data_type buf[buf_len];
+        int result = read(ham_driver, buf, buf_len * sizeof(data_type));
+        for (int i = 0; i < buf_len; ++i) {
+            if ((buf[i] & 0x00001000) == 0x00001000) {
+                buf[i] = ~(buf[i] ^ 0x00001000) + 1;
+            }
+        }
         std::cout << result << std::endl;
         out_data.resize(blocks_num*upperpow2(buf_len));
         std::copy(buf, buf + buf_len, out_data.begin());
