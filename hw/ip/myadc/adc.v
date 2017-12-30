@@ -17,7 +17,7 @@ module adc(
     streaming_source_data,
     streaming_source_valid,
     streaming_source_channel,
-
+    
     adc_clk, // max 40mhz
     // adc interface
     CONVST,
@@ -56,7 +56,7 @@ wire measure_done;
 assign slave_read_data = (~slave_chipselect && ~slave_read && slave_address == `READ_REG_ADC_VALUE) ?1'b1:1'b0;
 
 
-always @ (posedge slave_clk)
+always @ (posedge slave_clk)    
 begin
     if(slave_reset)
         streaming_source_valid <= 1'b0;
@@ -74,24 +74,24 @@ begin
 end
 
 ////////////////////////////////////
-// control measure_start
+// control measure_start 
 
 reg wait_measure_done = 1'b0;
 reg measure_start = 1'b0;
-reg [2:0] measure_ch = 3'd0;
+reg [2:0] measure_ch = 3'd1;
 
-always @ (posedge adc_clk or posedge slave_reset)
+always @ (posedge adc_clk or posedge slave_reset)    
 begin
     if (slave_reset)
     begin
         measure_start <= 1'b0;
         wait_measure_done <= 1'b0;
-        measure_ch <= 3'd0;
-    end
+        measure_ch <= 3'd1;
+    end 
     else if (~measure_start & ~wait_measure_done)
     begin
-        if (measure_ch == 3'd2) begin
-            measure_ch <= 3'd0;
+        if (measure_ch == 3'd3) begin
+            measure_ch <= 3'd1;
         end else begin
             measure_ch <= measure_ch + 1;
         end
@@ -118,14 +118,14 @@ adc_ltc2308 adc_ltc2308_inst(
     .measure_start(measure_start), // posedge triggle
     .measure_done(measure_done),
     .measure_ch(measure_ch),
-    .measure_dataread(measure_dataread),
-
+    .measure_dataread(measure_dataread),    
+    
 
     // adc interface
     .ADC_CONVST(CONVST),
     .ADC_SCK(SCK),
     .ADC_SDI(SDI),
-    .ADC_SDO(SDO)
+    .ADC_SDO(SDO) 
 );
-
+    
 endmodule

@@ -54,7 +54,7 @@ module adc_fifo (
             , SETUP_DMA = 8'd5
             , TO_DMA    = 8'd6
             , PAUSE     = 8'd7
-            , END       = 8'd9
+            , END       = 8'd8
             , DMA_EVENT = 32'd123
             , SIZE_FIFO = 32'd3072;
 
@@ -87,6 +87,23 @@ module adc_fifo (
     wire dma_event;
     assign dma_event = (avalon_streaming_sink_valid == 1'b1 && avalon_streaming_sink_data == DMA_EVENT) ? 1'b1 : 1'b0;
 
+    reg align_event;
+    
+    always @ (posedge clk or posedge reset)
+    begin
+        if (reset) begin
+            align_event <= 1'b0;
+        end else begin
+            if (align_event == 0 && dma_event == 1) begin
+                align_event <= 1'b1;
+            end else if (state == END) begin
+                align_event <= 1'b0;
+            end
+        end
+    end
+
+    reg [2:0] adc_prev_channel;
+
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
@@ -101,7 +118,9 @@ module adc_fifo (
             avalon_slave_readdatavalid      <= 1'b0;
             avalon_slave_waitrequest        <= 1'b0;
             pause_cntr                      <= 4'd0;
+            adc_prev_channel                <= 3'd0;
         end else begin
+            adc_prev_channel <= avalon_ss_adc_channel; 
             case (state)
                 FILL:
                     if (cntr_in < SIZE_FIFO && avalon_ss_adc_valid == 1'b0) begin
@@ -118,10 +137,10 @@ module adc_fifo (
                 FULL:
                     begin
                         avalon_streaming_source_valid <= 1'b0;
-                        if (avalon_ss_adc_valid == 1'b1) begin
-                            state  <= POP;
-                        end else if (dma_event == 1'b1) begin
+                        if (align_event == 1'b1 && avalon_ss_adc_channel == 1 && adc_prev_channel == 1) begin
                             state <= SETUP_DMA;
+                        end else if (avalon_ss_adc_valid == 1'b1) begin
+                            state  <= POP;
                         end
                     end
                 POP:
