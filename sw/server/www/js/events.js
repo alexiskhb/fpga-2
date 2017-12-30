@@ -1,20 +1,16 @@
 const fastcgiAddress = "/sv";
-const speed_of_sound = 1500;
-const inv_ns = 1e8;
-
-function to_byte_str_32(num) {
-    arr = new ArrayBuffer(4);
-    view = new DataView(arr);
-    view.setUint32(0, num, false);
-    return arr;
-}
+const speedOfSound = 1500;
+const invNs = 1e8;
 
 let plots = [];
 let intervalHandler = 0;
+let defaultChartWidth = 0;
+let defaultChartHeight = 0;
+let oldChartHtml = 0;
 
 $(document).ready(function() {
-    $("#set_mask_button").click(function() {
-        let num = parseInt($('#mask_edit').val());
+    $("#setMaskButton").click(function() {
+        let num = parseInt($('#maskEdit').val());
         alert(num);
         $.ajax({
             url: fastcgiAddress,
@@ -26,8 +22,8 @@ $(document).ready(function() {
         });
     });
 
-    $("#ping_button").click(function() {
-        update_contents();
+    $("#pingButton").click(function() {
+        updateContents();
     });
 
     function spacify(ary) {
@@ -38,11 +34,11 @@ $(document).ready(function() {
         return result;
     }
 
-    function update_contents() {
-        let a1 = document.getElementById('a1_coord').value.split(';');
-        let a2 = document.getElementById('a2_coord').value.split(';');
-        let a3 = document.getElementById('a3_coord').value.split(';');
-        let a4 = document.getElementById('a4_coord').value.split(';');
+    function updateContents() {
+        let a1 = document.getElementById('a1Coord').value.split(';');
+        let a2 = document.getElementById('a2Coord').value.split(';');
+        let a3 = document.getElementById('a3Coord').value.split(';');
+        let a4 = document.getElementById('a4Coord').value.split(';');
         let pc = ("0;0;0").split(';');
 
         let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
@@ -50,22 +46,22 @@ $(document).ready(function() {
         let d3 = Math.sqrt((pc[0] - a3[0])**2 + (pc[1] - a3[1])**2 + (pc[2] - a3[2])**2);
         let d4 = Math.sqrt((pc[0] - a4[0])**2 + (pc[1] - a4[1])**2 + (pc[2] - a4[2])**2);
 
-        let d_min = Math.min(d1, d2, d3, d4);
+        let dMin = Math.min(d1, d2, d3, d4);
 
-        let l1 = Math.floor((d1 - d_min)/speed_of_sound*inv_ns);
-        let l2 = Math.floor((d2 - d_min)/speed_of_sound*inv_ns);
-        let l3 = Math.floor((d3 - d_min)/speed_of_sound*inv_ns);
-        let l4 = Math.floor((d4 - d_min)/speed_of_sound*inv_ns);
+        let l1 = Math.floor((d1 - dMin)/speedOfSound*invNs);
+        let l2 = Math.floor((d2 - dMin)/speedOfSound*invNs);
+        let l3 = Math.floor((d3 - dMin)/speedOfSound*invNs);
+        let l4 = Math.floor((d4 - dMin)/speedOfSound*invNs);
 
         let slice = document.getElementById('slice').value.split(';');
-        let slice_beg = slice[0];
-        let slice_end = slice[1];
+        let sliceBeg = slice[0];
+        let sliceEnd = slice[1];
         let threshold = document.getElementById('threshold').value;
         let frequency = document.getElementById('frequency').value;
-        let pulse_len = document.getElementById('pulse_len').value;
+        let pulseLen = document.getElementById('pulseLen').value;
         let amplitude = document.getElementById('amplitude').value;
-        let sample_rate = document.getElementById('sample_rate').value;
-        let post_data = spacify([d1, d2, d3, d4, slice_beg, slice_end, threshold, frequency, pulse_len, amplitude, sample_rate]);
+        let sampleRate = document.getElementById('sampleRate').value;
+        let postData = spacify([d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
 
         var options = [{
             lines: {
@@ -95,7 +91,7 @@ $(document).ready(function() {
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
-            data: post_data,
+            data: postData,
             success: function(result) {
                 result = result.split('|');
                 let delays = result[0].split(';');
@@ -118,37 +114,57 @@ $(document).ready(function() {
     }
 
     function start() {
-        let value = $("#poll_period").val();
+        let value = $("#pollPeriod").val();
         if (0 < value && value < 1000) {
-            intervalHandler = setInterval(update_contents, value*1000); 
+            intervalHandler = setInterval(updateContents, value*1000); 
         }
     }
 
     $(window).on("load", function(e) {
         start();
+        defaultChartWidth = $(document.getElementById('chart00')).width();
+        defaultChartHeight = $(document.getElementById('chart00')).height();
+        toggleGeneratorControls();
     });
 
-    $(window).resize(function() {
-        
-    });
-
-    $(".resizeableDiv").mouseup(function() {
+    function resizeCharts() {
         for (var i = 0; i < plots.length; i++) {
             plots[i].resize();
             plots[i].setupGrid();
             plots[i].draw();
         }
+    }
+
+    $(".resizeableDiv").mouseup(function() {
+        resizeCharts();
     });
 
-    $("#poll_period").bind('keyup mouseup', function () {
-        let value = $("#poll_period").val();
+    $("#pollPeriod").bind('keyup mouseup', function () {
+        let value = $("#pollPeriod").val();
         clearInterval(intervalHandler);
         if (0 < value && value < 1000) {
-            intervalHandler = setInterval(update_contents, value*1000); 
+            intervalHandler = setInterval(updateContents, value*1000); 
         }
     }); 
 
-    $("#toggleControls").click(function(){
+    function toggleGeneratorControls() {
         $(document.getElementById("generatorControls")).toggle();
+    }
+
+    $("#toggleControlsBtn").click(function() {
+        toggleGeneratorControls();
+    });
+
+    $("#restoreSizeBtn").click(function() {
+        for (var i = 0; i < chartRows; i++) {
+            for (var j = 0; j < chartCols; j++) {
+                document.getElementById(('chart' + i) + j).setAttribute("style", 
+                    "width:" + defaultChartWidth + 
+                    ";height:" + defaultChartHeight + 
+                    ";position:relative");
+                // document.getElementById(('chart' + i) + j).setAttribute("class", "resizeableDiv");
+            }
+        }
+        resizeCharts();
     }); 
 });
