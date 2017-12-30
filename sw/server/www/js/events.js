@@ -9,7 +9,8 @@ function to_byte_str_32(num) {
     return arr;
 }
 
-var plots = [];
+let plots = [];
+let intervalHandler = 0;
 
 $(document).ready(function() {
     $("#set_mask_button").click(function() {
@@ -26,11 +27,23 @@ $(document).ready(function() {
     });
 
     $("#ping_button").click(function() {
+        update_contents();
+    });
+
+    function spacify(ary) {
+        result = "";
+        for (var i = 0; i < ary.length; i++) {
+            result += ary[i] + " ";
+        }
+        return result;
+    }
+
+    function update_contents() {
         let a1 = document.getElementById('a1_coord').value.split(';');
         let a2 = document.getElementById('a2_coord').value.split(';');
         let a3 = document.getElementById('a3_coord').value.split(';');
         let a4 = document.getElementById('a4_coord').value.split(';');
-        let pc = document.getElementById('pinger_coord').value.split(';');
+        let pc = ("0;0;0").split(';');
 
         let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
         let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
@@ -44,26 +57,16 @@ $(document).ready(function() {
         let l3 = Math.floor((d3 - d_min)/speed_of_sound*inv_ns);
         let l4 = Math.floor((d4 - d_min)/speed_of_sound*inv_ns);
 
-        slice = document.getElementById('slice').value.split(';');
-        slice_beg = slice[0];
-        slice_end = slice[1];
-        threshold = document.getElementById('threshold').value;
-        frequency = document.getElementById('frequency').value;
-        pulse_len = document.getElementById('pulse_len').value;
-        detalization = document.getElementById('detalization').value;
-        post_data = spacify([d1, d2, d3, d4, slice_beg, slice_end, threshold, frequency, pulse_len, detalization]); 
-        update_contents(post_data);      
-    });
+        let slice = document.getElementById('slice').value.split(';');
+        let slice_beg = slice[0];
+        let slice_end = slice[1];
+        let threshold = document.getElementById('threshold').value;
+        let frequency = document.getElementById('frequency').value;
+        let pulse_len = document.getElementById('pulse_len').value;
+        let amplitude = document.getElementById('amplitude').value;
+        let sample_rate = document.getElementById('sample_rate').value;
+        let post_data = spacify([d1, d2, d3, d4, slice_beg, slice_end, threshold, frequency, pulse_len, amplitude, sample_rate]);
 
-    function spacify(ary) {
-        result = "";
-        for (var i = 0; i < ary.length; i++) {
-            result += ary[i] + " ";
-        }
-        return result;
-    }
-
-    function update_contents(post_data) {
         var options = [{
             lines: {
                 show: true,
@@ -106,9 +109,7 @@ $(document).ready(function() {
                         if (plots.length < chartCols*chartRows) {
                             plots.push(0);
                         }
-                        // let wdth = $(("#chart" + i) + j).width();
                         let dt = JSON.parse(result[j + 1][i]);
-                        // let x = dt[0][dt[0].length - 1][0] - dt[0][0][0];
                         plots[i*chartCols + j] = $.plot(("#chart" + i) + j, dt, options[j]);
                     }
                 }
@@ -117,7 +118,10 @@ $(document).ready(function() {
     }
 
     function start() {
-        // setInterval(update_contents, 2000);
+        let value = $("#poll_period").val();
+        if (0 < value && value < 1000) {
+            intervalHandler = setInterval(update_contents, value*1000); 
+        }
     }
 
     $(window).on("load", function(e) {
@@ -135,4 +139,16 @@ $(document).ready(function() {
             plots[i].draw();
         }
     });
+
+    $("#poll_period").bind('keyup mouseup', function () {
+        let value = $("#poll_period").val();
+        clearInterval(intervalHandler);
+        if (0 < value && value < 1000) {
+            intervalHandler = setInterval(update_contents, value*1000); 
+        }
+    }); 
+
+    $("#toggleControls").click(function(){
+        $(document.getElementById("generatorControls")).toggle();
+    }); 
 });

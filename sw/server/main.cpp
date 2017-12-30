@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include <iostream>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -17,6 +18,8 @@
 
 #define DEVICE_NAME "/dev/ham"
 
+const bool test_generator = false;
+
 int upperpow2(int k) {
     int result = 1;
     while (result < k) {
@@ -27,23 +30,18 @@ int upperpow2(int k) {
 
 class Pinger {
 public:
-    Pinger(int freq/*kHz*/, int pulse_len/*ms*/, int amplitude, int detalization) : 
-        freq(freq), pulse_len(pulse_len), detl(detalization), ampl(amplitude)
+    Pinger(int freq/*Hz*/, int pulse_len/*ms*/, int amplitude, int sample_rate) : 
+        freq(freq), pulse_len(pulse_len), ampl(amplitude), sample_rate(sample_rate)
     {
-        this->delta = 1.0 / (1000 * freq * detl);
-        this->periods = pulse_len * freq;
-        this->block_size = upperpow2(periods*detl);
+        this->block_size = upperpow2(pulse_len*measures_per_ms);
         std::cout << 
             "freq: " << freq <<
-            "\ndelta: " << delta <<
-            "\ndetalization: " << detalization << 
-            "\nperiods: " << periods <<
             "\nblock size: " << block_size << std::endl;
     }
 
-    std::vector<data_type> generate(std::vector<float> distances/*meters*/) 
+    std::vector<data_type> generate(std::vector<double> distances/*meters*/) 
     {
-        float min_dist = distances.front();
+        double min_dist = distances.front();
         for (int d: distances) {
             if (d < min_dist) {
                 min_dist = d;
@@ -51,32 +49,32 @@ public:
         }
         int blocks_num = distances.size();
         std::vector<data_type> result(block_size * blocks_num);
-        m_generate_data(block_size, delta);
+        m_generate_data(block_size);
         for (int i = 0; i < blocks_num; i++) {
             m_generate_impl(result.begin() + block_size*i, distances[i] - min_dist);
         }
         return result;
     }
 public:
-    void m_generate_impl(const std::vector<data_type>::iterator begin, float dist)
+    void m_generate_impl(const std::vector<data_type>::iterator begin, double dist)
     {
-        float speed_of_sound = 1468.5;
-        int shift = (dist/delta)/speed_of_sound;
+        double speed_of_sound = 1468.5;
+        // I don't know why 1000000
+        int shift = std::min(int(1'000'000*dist/speed_of_sound), block_size);
         std::cout << shift << std::endl;
         std::fill(begin, begin + shift, 0);
         std::copy(data.begin(), data.end() - shift, begin + shift);
     }
 
-    void m_generate_data(int block_size, float delta)
+    void m_generate_data(int block_size)
     {
         data.resize(block_size);
-        for (int i = 0; i < block_size; i++) {
-            float t = delta*i*1000*1000;
-            data[i] = ampl*sin(t) + ampl + 1;
+        for (int t = 0; t < block_size; t++) {
+            data[t] = ampl*sin((2*M_PI*t*freq)/sample_rate) + ampl + 1;
         }
     }
-    int freq, pulse_len, detl, ampl, periods, block_size;
-    float delta;
+    const int measures_per_ms = 1000;
+    int freq, pulse_len, ampl, block_size, sample_rate;
     std::vector<data_type> data;
 };
 
@@ -107,9 +105,6 @@ public:
             out_data[0*block_size + i/blocks_num] = buf[i];
             out_data[1*block_size + i/blocks_num] = buf[i + 1];
             out_data[2*block_size + i/blocks_num] = buf[i + 2];
-        }
-        for (int i = 0; i < buf_len; i++) {
-            std::cout << buf[i] << ' ';
         }
         std::cout << std::endl;
         return blocks_num;
@@ -142,17 +137,41 @@ public:
     {}
 private:
     data_type data[4];
-    float d1 = 0, d2 = 0, d3 = 0, d4 = 0, threshold = 0.5;
-    int slice_beg = 0, slice_end = 250, frequency = 20, pulse_len = 1, detalization = 30;
+    double d1 = 0, d2 = 0, d3 = 0, d4 = 0, threshold = 0.5;
+    int slice_beg = 0, slice_end = 250, frequency = 20000;
+    int pulse_len = 1, amplitude = 1000, sample_rate = 20000;
 private:
     bool inProcessor()
     {
         using namespace std;
         string s(environment().postBuffer().begin(), environment().postBuffer().end());
         std::stringstream ss(s);
-        ss >> d1 >> d2 >> d3 >> d4 >> slice_beg >> slice_end >> threshold >> frequency >> pulse_len >> detalization;
+        ss >> d1 >> d2 >> d3 >> d4 >> slice_beg >> slice_end >> threshold >> frequency >> pulse_len >> amplitude;
         std::cout << "POST:>/" << s << "/<" << std::endl;
         return true;
+    }
+
+    template<class T>
+    typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type to_json(const T& c) {
+        return to_string(c);
+    }
+
+    template<class T1, class T2>
+    std::string to_json(const std::pair<T1, T2>& p) {
+        return "[" + std::to_string(p.first) + "," + std::to_string(p.second) + "]";
+    }
+
+    template<class T>
+    std::string to_json(const std::vector<T>& c) {
+        if (c.size() == 0) {
+            return "[]";
+        }
+        std::string result = "[";
+        for (const T& e: c) {
+            result += to_json(e) + ",";
+        }
+        result.back() = ']';
+        return result;
     }
 
     bool response()
@@ -160,13 +179,18 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
-            std::vector<data_type> data;
-            int blocks_num = driver.recv(0, data);
+            std::vector<data_type> data, hilbert_result, fourier_result;
+            int blocks_num;
+            if (!test_generator) {
+                blocks_num = driver.recv(0, data);
+            } else {
+                blocks_num = 4;
+                data = Pinger{frequency, pulse_len, amplitude, sample_rate}.generate({d1, d2, d3, d4});
+            }
             int block_size = data.size()/blocks_num;
 
-            std::vector<std::pair<data_type, data_type>> spectra;
             data_type delays[blocks_num];
-            process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, spectra);
+            process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, hilbert_result, fourier_result);
             
             // Order of output matters.
             // Don't change it
@@ -191,14 +215,14 @@ private:
             for (int k = 0; k < blocks_num; k++) {
                 out << "[[";
                 for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
-                    out << '[' << i << ',' << spectra[k*block_size + i].first << "],"; 
+                    out << '[' << i << ',' << hilbert_result[k*block_size + i] << "],"; 
                 }
-                out << '[' << cycle_slice_end - 1 << ',' << spectra[k*block_size + cycle_slice_end - 1].first << "]],[";
+                out << '[' << cycle_slice_end - 1 << ',' << hilbert_result[k*block_size + cycle_slice_end - 1] << "]],[";
 
                 for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
-                    out << '[' << i << ',' << spectra[k*block_size + i].second << "],"; 
+                    out << '[' << i << ',' << fourier_result[k*block_size + i] << "],"; 
                 }
-                out << '[' << cycle_slice_end - 1 << ',' << spectra[k*block_size + cycle_slice_end - 1].second << (k < blocks_num - 1 ? "]]];" : "]]]");
+                out << '[' << cycle_slice_end - 1 << ',' << fourier_result[k*block_size + cycle_slice_end - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");                
             }
         }
 
