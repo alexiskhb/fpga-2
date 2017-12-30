@@ -42,6 +42,9 @@ module adc_fifo (
     reg [31:0] cntr_in;
     reg [31:0] cntr_out;
     reg [7:0] state;
+    reg [7:0] state_after_pause;
+
+    reg [4:0] pause_cntr;
 
     parameter WAITE     = 8'd0
             , FILL      = 8'd1
@@ -50,7 +53,8 @@ module adc_fifo (
             , PUSH      = 8'd4
             , SETUP_DMA = 8'd5
             , TO_DMA    = 8'd6
-            , END       = 8'd7
+            , PAUSE     = 8'd7
+            , END       = 8'd9
             , DMA_EVENT = 32'd123
             , SIZE_FIFO = 32'd3072;
 
@@ -96,6 +100,7 @@ module adc_fifo (
             avalon_streaming_source_valid   <= 0;
             avalon_slave_readdatavalid      <= 1'b0;
             avalon_slave_waitrequest        <= 1'b0;
+            pause_cntr                      <= 4'd0;
         end else begin
             case (state)
                 FILL:
@@ -104,6 +109,8 @@ module adc_fifo (
                     end else if (cntr_in < SIZE_FIFO && avalon_ss_adc_valid == 1'b1) begin
                         avalon_streaming_source_valid <= 1'b1;
                         avalon_streaming_source_data <= avalon_ss_adc_data;
+                        state <= PAUSE;
+                        state_after_pause <= FILL;
                     end else if (cntr_in >= SIZE_FIFO) begin
                         avalon_streaming_source_valid <= 1'b0;
                         state <= FULL;
@@ -113,7 +120,7 @@ module adc_fifo (
                         avalon_streaming_source_valid <= 1'b0;
                         if (avalon_ss_adc_valid == 1'b1) begin
                             state  <= POP;
-                        end else if (dma_event == 1'b1) begin                        
+                        end else if (dma_event == 1'b1) begin
                             state <= SETUP_DMA;
                         end
                     end
@@ -127,7 +134,8 @@ module adc_fifo (
                         avalon_streaming_sink_1_ready <= 1'b0;
                         avalon_streaming_source_valid <= 1'b1;
                         avalon_streaming_source_data <= avalon_ss_adc_data;
-                        state <= FULL;
+                        state <= PAUSE;
+                        state_after_pause <= FULL;
                     end
                 SETUP_DMA:
                     if (avalon_streaming_sink_1_valid == 1'b1 && avalon_slave_chipselect == 1'b1) begin
@@ -141,7 +149,16 @@ module adc_fifo (
                     end else begin
                         avalon_streaming_sink_1_ready <= 1'b0;
                         avalon_slave_readdatavalid <= 1'b0;
-                        state <= END;                        
+                        state <= END;
+                    end
+                PAUSE:
+                    begin
+                        if (pause_cntr >= 4'd7) begin
+                            pause_cntr <= 4'd0;
+                            state <= state_after_pause;
+                        end else begin
+                            pause_cntr <= pause_cntr + 1;
+                        end
                     end
             endcase
         end
