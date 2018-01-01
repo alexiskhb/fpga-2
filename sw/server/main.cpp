@@ -8,75 +8,17 @@
 #include <string>
 #include <limits>
 #include <ctime>
+#include <functional>
 #include <random>
 
 #include "processing.h"
+#include "pinger.h"
 #include "../driver/ioctl_commands.h"
 
 #include <fastcgi++/request.hpp>
 #include <fastcgi++/manager.hpp>
 
 #define DEVICE_NAME "/dev/ham"
-
-const bool test_generator = false;
-
-int upperpow2(int k) {
-    int result = 1;
-    while (result < k) {
-        result <<= 1;
-    }
-    return result;
-}
-
-class Pinger {
-public:
-    Pinger(int freq/*Hz*/, int pulse_len/*ms*/, int amplitude, int sample_rate) : 
-        freq(freq), pulse_len(pulse_len), ampl(amplitude), sample_rate(sample_rate)
-    {
-        this->block_size = upperpow2(pulse_len*measures_per_ms);
-        std::cout << 
-            "freq: " << freq <<
-            "\nblock size: " << block_size << std::endl;
-    }
-
-    std::vector<data_type> generate(std::vector<double> distances/*meters*/) 
-    {
-        double min_dist = distances.front();
-        for (int d: distances) {
-            if (d < min_dist) {
-                min_dist = d;
-            }
-        }
-        int blocks_num = distances.size();
-        std::vector<data_type> result(block_size * blocks_num);
-        m_generate_data(block_size);
-        for (int i = 0; i < blocks_num; i++) {
-            m_generate_impl(result.begin() + block_size*i, distances[i] - min_dist);
-        }
-        return result;
-    }
-public:
-    void m_generate_impl(const std::vector<data_type>::iterator begin, double dist)
-    {
-        double speed_of_sound = 1468.5;
-        // I don't know why 1000000
-        int shift = std::min(int(1'000'000*dist/speed_of_sound), block_size);
-        std::cout << shift << std::endl;
-        std::fill(begin, begin + shift, 0);
-        std::copy(data.begin(), data.end() - shift, begin + shift);
-    }
-
-    void m_generate_data(int block_size)
-    {
-        data.resize(block_size);
-        for (int t = 0; t < block_size; t++) {
-            data[t] = ampl*sin((2*M_PI*t*freq)/sample_rate) + ampl + 1;
-        }
-    }
-    const int measures_per_ms = 1000;
-    int freq, pulse_len, ampl, block_size, sample_rate;
-    std::vector<data_type> data;
-};
 
 class Driver 
 {
@@ -137,41 +79,20 @@ public:
     {}
 private:
     data_type data[4];
-    double d1 = 0, d2 = 0, d3 = 0, d4 = 0, threshold = 0.5;
-    int slice_beg = 0, slice_end = 250, frequency = 20000;
-    int pulse_len = 1, amplitude = 1000, sample_rate = 20000;
+    double post_d1 = 0, post_d2 = 0, post_d3 = 0, post_d4 = 0, post_threshold = 0.5;
+    int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000;
+    int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, post_is_generator_test = 0;
 private:
     bool inProcessor()
     {
-        using namespace std;
-        string s(environment().postBuffer().begin(), environment().postBuffer().end());
-        std::stringstream ss(s);
-        ss >> d1 >> d2 >> d3 >> d4 >> slice_beg >> slice_end >> threshold >> frequency >> pulse_len >> amplitude;
+        std::string s(environment().postBuffer().begin(), environment().postBuffer().end());
+        std::stringstream post_ss(s);
+        post_ss >> post_is_generator_test >>
+              post_d1 >> post_d2 >> post_d3 >> post_d4 >> post_slice_beg >> 
+              post_slice_end >> post_threshold >> post_frequency >> post_pulse_len >> 
+              post_amplitude;
         std::cout << "POST:>/" << s << "/<" << std::endl;
         return true;
-    }
-
-    template<class T>
-    typename std::enable_if<std::is_arithmetic<T>::value, std::string>::type to_json(const T& c) {
-        return to_string(c);
-    }
-
-    template<class T1, class T2>
-    std::string to_json(const std::pair<T1, T2>& p) {
-        return "[" + std::to_string(p.first) + "," + std::to_string(p.second) + "]";
-    }
-
-    template<class T>
-    std::string to_json(const std::vector<T>& c) {
-        if (c.size() == 0) {
-            return "[]";
-        }
-        std::string result = "[";
-        for (const T& e: c) {
-            result += to_json(e) + ",";
-        }
-        result.back() = ']';
-        return result;
     }
 
     bool response()
@@ -181,52 +102,84 @@ private:
         if (driver.is_ready()) {
             std::vector<data_type> data, hilbert_result, fourier_result;
             int blocks_num;
-            if (!test_generator) {
-                blocks_num = driver.recv(0, data);
+            if (post_is_generator_test) {
+                blocks_num = 3;
+                data = Pinger{post_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
             } else {
-                blocks_num = 4;
-                data = Pinger{frequency, pulse_len, amplitude, sample_rate}.generate({d1, d2, d3, d4});
+                blocks_num = driver.recv(0, data);
             }
             int block_size = data.size()/blocks_num;
 
-            data_type delays[blocks_num];
-            process_ping_guilbert(data.data(), blocks_num, block_size, delays, threshold, hilbert_result, fourier_result);
+            std::vector<data_type> delays(blocks_num);
+            process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), post_threshold, hilbert_result, fourier_result);
+
+            int slice_beg = std::max(post_slice_beg, 0);
+            int slice_end = std::min(post_slice_end, block_size);
+
+            auto out_delays = std::bind(&WebClientRequest::out_ary, this, delays.begin(), delays.end());
             
-            // Order of output matters.
-            // Don't change it
-            // 0;1;2;3|[...
-            for (int i = 0; i < blocks_num; i++) {
-                out << delays[i] << (i < blocks_num - 1 ? ';' : '|');
-            }
-            int cycle_slice_beg = std::max(slice_beg, 0);
-            int cycle_slice_end = std::min(slice_end, block_size);
-            // Output data in JSON format:
-            // [[[0,1],[2,3],...]];[[[6,7],...]];...;[[[8,9],...]]|[[[10, 11],...]],...
-            //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^^
-            //                 left charts                        |    right charts
-            for (int k = 0; k < blocks_num; k++) {
-                out << "[[";
-                for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
-                    out << '[' << i << ',' << data[k*block_size + i] << "],"; 
-                }
-                out << '[' << cycle_slice_end - 1 << ',' << data[k*block_size + cycle_slice_end - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");
-            }
-            out << "|";
-            for (int k = 0; k < blocks_num; k++) {
-                out << "[[";
-                for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
-                    out << '[' << i << ',' << hilbert_result[k*block_size + i] << "],"; 
-                }
-                out << '[' << cycle_slice_end - 1 << ',' << hilbert_result[k*block_size + cycle_slice_end - 1] << "]],[";
+            auto data_0 = std::bind(&WebClientRequest::out_indexed_ary, this, data.begin() + 0*block_size + slice_beg, data.begin() + 0*block_size + slice_end);
+            auto data_1 = std::bind(&WebClientRequest::out_indexed_ary, this, data.begin() + 1*block_size + slice_beg, data.begin() + 1*block_size + slice_end);
+            auto data_2 = std::bind(&WebClientRequest::out_indexed_ary, this, data.begin() + 2*block_size + slice_beg, data.begin() + 2*block_size + slice_end);
 
-                for (int i = cycle_slice_beg; i < cycle_slice_end - 1; ++i) {
-                    out << '[' << i << ',' << fourier_result[k*block_size + i] << "],"; 
-                }
-                out << '[' << cycle_slice_end - 1 << ',' << fourier_result[k*block_size + cycle_slice_end - 1] << (k < blocks_num - 1 ? "]]];" : "]]]");                
-            }
+            auto hilbert_0 = std::bind(&WebClientRequest::out_indexed_ary, this, hilbert_result.begin() + 0*block_size + slice_beg, hilbert_result.begin() + 0*block_size + slice_end);
+            auto hilbert_1 = std::bind(&WebClientRequest::out_indexed_ary, this, hilbert_result.begin() + 1*block_size + slice_beg, hilbert_result.begin() + 1*block_size + slice_end);
+            auto hilbert_2 = std::bind(&WebClientRequest::out_indexed_ary, this, hilbert_result.begin() + 2*block_size + slice_beg, hilbert_result.begin() + 2*block_size + slice_end);
+
+            auto fourier_0 = std::bind(&WebClientRequest::out_indexed_ary, this, fourier_result.begin() + 0*block_size + slice_beg, fourier_result.begin() + 0*block_size + slice_end);
+            auto fourier_1 = std::bind(&WebClientRequest::out_indexed_ary, this, fourier_result.begin() + 1*block_size + slice_beg, fourier_result.begin() + 1*block_size + slice_end);
+            auto fourier_2 = std::bind(&WebClientRequest::out_indexed_ary, this, fourier_result.begin() + 2*block_size + slice_beg, fourier_result.begin() + 2*block_size + slice_end);
+
+            auto msg_bind = js_obj({"delays", "data", "hilbert", "fourier"}, {
+                out_delays,
+                js_ary({data_0, data_1, data_2}),
+                js_ary({hilbert_0, hilbert_1, hilbert_2}),
+                js_ary({fourier_0, fourier_1, fourier_2}),
+            });
+
+            msg_bind();
         }
-
         return true;
+    }
+
+    void out_ary(const std::vector<data_type>::iterator& data_begin, const std::vector<data_type>::iterator& data_end) {
+        out << "[";
+        for (auto it = data_begin; it != data_end; ++it) {
+            out << *it << (std::next(it) == data_end ? "]" : ","); 
+        }
+    }
+
+    void out_indexed_ary(const std::vector<data_type>::iterator& data_begin, const std::vector<data_type>::iterator& data_end) {
+        int i = 0;
+        out << "[";
+        for (auto it = data_begin; it != data_end; ++it, ++i) {
+            out << '[' << i << ',' << *it << (std::next(it) == data_end ? "]]" : "],"); 
+        }
+    }
+
+    std::function<void()> js_ary(const std::vector<std::function<void()>>& fs) {
+        return std::bind(&WebClientRequest::js_ary_impl, this, fs);
+    }
+
+    std::function<void()> js_obj(const std::vector<std::string>& keys, const std::vector<std::function<void()>>& values) {
+        return std::bind(&WebClientRequest::js_obj_impl, this, keys, values);
+    }
+private:
+    void js_ary_impl(const std::vector<std::function<void()>>& fs) {
+        out << "[";
+        for (unsigned i = 0; i < fs.size(); i++) {
+            fs[i]();
+            out << (i < fs.size() - 1 ? "," : "]");
+        }
+    }
+
+    void js_obj_impl(const std::vector<std::string>& keys, const std::vector<std::function<void()>>& values) {
+        out << "{";
+        for (unsigned i = 0; i < keys.size(); i++) {
+            out << '"' << keys[i].c_str() << "\":";
+            values[i]();
+            out << (i < keys.size() - 1 ? "," : "}");
+        }
     }
 };
 

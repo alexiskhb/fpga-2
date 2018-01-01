@@ -1,57 +1,48 @@
+// nginx redirects /sv -> host:8000 (see README/nginx.conf)
 const fastcgiAddress = "/sv";
-const speedOfSound = 1500;
+// 1/nanosecond
 const invNs = 1e8;
+const speedOfSound = 1500;
 
+// Array of flot librar objects
 let plots = [];
+
+// Needed to stop polling by interval
 let intervalHandler = 0;
+
+// Needed to restore size of charts
 let defaultChartWidth = 0;
 let defaultChartHeight = 0;
-let oldChartHtml = 0;
+let is_generator_test = 0;
 
 $(document).ready(function() {
-    $("#setMaskButton").click(function() {
-        let num = parseInt($('#maskEdit').val());
-        alert(num);
-        $.ajax({
-            url: fastcgiAddress,
-            type: "POST",
-            data: "",
-            success: function (data) {
-                document.getElementById('result2').innerHTML = data;
-            }
-        });
-    });
-
     $("#pingButton").click(function() {
         updateContents();
     });
 
     function spacify(ary) {
         result = "";
-        for (var i = 0; i < ary.length; i++) {
+        for (let i = 0; i < ary.length; i++) {
             result += ary[i] + " ";
         }
         return result;
     }
 
+
     function updateContents() {
+        // Read coordinates of receivers
         let a1 = document.getElementById('a1Coord').value.split(';');
         let a2 = document.getElementById('a2Coord').value.split(';');
         let a3 = document.getElementById('a3Coord').value.split(';');
         let a4 = document.getElementById('a4Coord').value.split(';');
-        let pc = ("0;0;0").split(';');
 
+        let pc = ("0;0;0").split(';');
         let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
         let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
         let d3 = Math.sqrt((pc[0] - a3[0])**2 + (pc[1] - a3[1])**2 + (pc[2] - a3[2])**2);
         let d4 = Math.sqrt((pc[0] - a4[0])**2 + (pc[1] - a4[1])**2 + (pc[2] - a4[2])**2);
-
-        let dMin = Math.min(d1, d2, d3, d4);
-
-        let l1 = Math.floor((d1 - dMin)/speedOfSound*invNs);
-        let l2 = Math.floor((d2 - dMin)/speedOfSound*invNs);
-        let l3 = Math.floor((d3 - dMin)/speedOfSound*invNs);
-        let l4 = Math.floor((d4 - dMin)/speedOfSound*invNs);
+        // let dMin = Math.min(d1, d2, d3, d4);
+        // let l1 = Math.floor((d1 - dMin)/speedOfSound*invNs);
 
         let slice = document.getElementById('slice').value.split(';');
         let sliceBeg = slice[0];
@@ -60,95 +51,89 @@ $(document).ready(function() {
         let frequency = document.getElementById('frequency').value;
         let pulseLen = document.getElementById('pulseLen').value;
         let amplitude = document.getElementById('amplitude').value;
-        let sampleRate = document.getElementById('sampleRate').value;
-        let postData = spacify([d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
+        let sampleRate = document.getElementById('sampleRate').value; 
 
-        var options = [{
-            lines: {
-                show: true,
-                color: "rgba(255, 255, 255, 0.8)"
-            },
-            points: {
-                show: false
-            },
-            xaxis: {
-                tickDecimals: 1,
-            },
-            colors: ["#0022FF"]
-        }, {
-            lines: {
-                show: true,
-                color: "rgba(255, 255, 255, 0.8)"
-            },
-            points: {
-                show: false
-            },
-            xaxis: {
-                tickDecimals: 1,
-            },
-        }];
+        // Post-query to server is space separated array of parameters for signal generator
+        let postData = spacify([is_generator_test, d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
 
+        let options = [{
+                xaxis: {
+                    tickDecimals: 1,
+                },
+                colors: ["#0022FF", "#00FF22"]
+            }, {
+                xaxis: {
+                    tickDecimals: 1,
+                }
+            }];
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
             data: postData,
             success: function(result) {
-                result = result.split('|');
-                let delays = result[0].split(';');
-                document.getElementById('result2').innerHTML = delays;
-                result[1] = result[1].split(';');
-                result[2] = result[2].split(';');
-                chartRows = result[1].length;
+                result = JSON.parse(result);
+                document.getElementById('result2').innerHTML = result.delays;
+                chartRows = result.data.length;
                 chartCols = 2;
-                for (var i = 0; i < chartRows; i++) {
-                    for (var j = 0; j < chartCols; j++) {
-                        if (plots.length < chartCols*chartRows) {
-                            plots.push(0);
-                        }
-                        let dt = JSON.parse(result[j + 1][i]);
-                        plots[i*chartCols + j] = $.plot(("#chart" + i) + j, dt, options[j]);
-                    }
+                // Save references to plots to be able
+                // to resize them later
+                while (plots.length < result.data.length + result.fourier.length) {
+                    plots.push(0);
+                }
+                // _______________________
+                // | chart00  |  chart01 |
+                // | chart10  |  chart11 |
+                // | chart20  |  chart21 |
+                for (let i = 0; i < result.data.length; i++) {
+                    plots[i] = $.plot(("#chart" + i) + 0, [result.data[i], result.hilbert[i]], options[0]);
+                }
+                for (let i = 0; i < result.fourier.length; i++) {
+                    plots[result.data.length + i] = $.plot(("#chart" + i) + 1, [result.fourier[i]], options[1]);
                 }
             }
         });
     }
 
-    function start() {
+    function updateInterval() {
         let value = $("#pollPeriod").val();
         if (0 < value && value < 1000) {
             intervalHandler = setInterval(updateContents, value*1000); 
         }
     }
 
+    // Executes when the page loads
     $(window).on("load", function(e) {
-        start();
+        updateInterval();
         defaultChartWidth = $(document.getElementById('chart00')).width();
         defaultChartHeight = $(document.getElementById('chart00')).height();
         toggleGeneratorControls();
+        is_generator_test = 0;
     });
 
     function resizeCharts() {
-        for (var i = 0; i < plots.length; i++) {
+        for (let i = 0; i < plots.length; i++) {
             plots[i].resize();
             plots[i].setupGrid();
             plots[i].draw();
         }
     }
 
+    // Resize chart after dragging of corner.
+    // We don't know what exactly chart has been resized,
+    // so update everything
     $(".resizeableDiv").mouseup(function() {
         resizeCharts();
     });
 
     $("#pollPeriod").bind('keyup mouseup', function () {
-        let value = $("#pollPeriod").val();
         clearInterval(intervalHandler);
-        if (0 < value && value < 1000) {
-            intervalHandler = setInterval(updateContents, value*1000); 
-        }
+        updateInterval();
     }); 
 
+    // Hide and show controls panel
     function toggleGeneratorControls() {
         $(document.getElementById("generatorControls")).toggle();
+        is_generator_test = 1 - is_generator_test;
     }
 
     $("#toggleControlsBtn").click(function() {
@@ -156,13 +141,12 @@ $(document).ready(function() {
     });
 
     $("#restoreSizeBtn").click(function() {
-        for (var i = 0; i < chartRows; i++) {
-            for (var j = 0; j < chartCols; j++) {
+        for (let i = 0; i < chartRows; i++) {
+            for (let j = 0; j < chartCols; j++) {
                 document.getElementById(('chart' + i) + j).setAttribute("style", 
                     "width:" + defaultChartWidth + 
                     ";height:" + defaultChartHeight + 
                     ";position:relative");
-                // document.getElementById(('chart' + i) + j).setAttribute("class", "resizeableDiv");
             }
         }
         resizeCharts();
