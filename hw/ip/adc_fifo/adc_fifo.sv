@@ -156,8 +156,8 @@ module adc_fifo (
                     end
                 SETUP_DMA:
                     begin
-                        irq <= 1'b0;
                         if (fifo_out_valid == 1'b1 && dma_chipselect == 1'b1) begin
+                            irq <= 1'b0;
                             fifo_out_ready <= 1'b1;
                             state <= TO_DMA;
                         end
