@@ -85,7 +85,7 @@ $(document).ready(function() {
                 // | chart10  |  chart11 |
                 // | chart20  |  chart21 |
                 for (let i = 0; i < result.data.length; i++) {
-                    plots[i] = $.plot(("#chart" + i) + 0, [result.data[i], result.hilbert[i]], options[0]);
+                    plots[i] = $.plot(("#chart" + i) + 0, [result.data[i]], options[0]);
                 }
                 for (let i = 0; i < result.fourier.length; i++) {
                     plots[result.data.length + i] = $.plot(("#chart" + i) + 1, [result.fourier[i]], options[1]);

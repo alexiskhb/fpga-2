@@ -12,7 +12,8 @@
 #define DEVICE_NAME                    "ham"
 #define UINPUT_BASE                    0xff200000
 #define UINPUT_SIZE                    0x00070000
-#define INTERRUPT_NUM                  72
+#define INTERRUPT_DMA_COMPLETE         72
+#define INTERRUPT_DMA_READY            77
 
 
 #define MODULE_OFFSET                  (ham_drv_mem + 0x00050000)
@@ -138,15 +139,29 @@ static const struct file_operations ham_drv_fops = {
     .llseek = no_llseek,
 };
 
-static irqreturn_t ham_drv_interrupt(int irq, void *dev_id)
+static irqreturn_t ham_drv_interrupt_dma_complete(int irq, void *dev_id)
 {
     printk(KERN_INFO "ham_drv: irq %d\n", irq);
-    if (irq != INTERRUPT_NUM) {
+    if (irq != INTERRUPT_DMA_COMPLETE) {
         return IRQ_NONE;
     }
     ham_drv_dma_write_reg(DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_LEEN, CONTROL);
-    ham_drv_dma_print_registers();
     ham_drv_dma_write_reg(0, STATUS);
+    return IRQ_HANDLED;
+}
+
+static irqreturn_t ham_drv_interrupt_dma_ready(int irq, void *dev_id)
+{
+    printk(KERN_INFO "ham_drv: irq %d\n", irq);
+    if (irq != INTERRUPT_DMA_READY) {
+        return IRQ_NONE;
+    }
+    unsigned int control_reg = DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_INTERRUPT | DMA_CONTROL_REG_BIT_LEEN;
+    ham_drv_dma_write_reg(control_reg, CONTROL);
+    ham_drv_dma_write_reg((unsigned int)buffer, WRITEADDRESS);
+    ham_drv_dma_write_reg(DMA_BUFFER_SIZE, LENGTH);
+    ham_drv_dma_write_reg(0, READADDRESS);
+    ham_drv_dma_write_reg(control_reg | DMA_CONTROL_REG_BIT_GO, CONTROL);
     return IRQ_HANDLED;
 }
 
@@ -186,37 +201,33 @@ static int __init ham_drv_init(void)
         goto fail_ioremap;
         }
 
-    ret = request_irq(INTERRUPT_NUM, ham_drv_interrupt, 0, "ham_drv", NULL); 
+    ret = request_irq(INTERRUPT_DMA_COMPLETE, ham_drv_interrupt_dma_complete, 0, "ham_drv", NULL); 
     if (ret != 0) {
-        printk(KERN_ALERT "ham_drv: failed to request irq %d\n", INTERRUPT_NUM);
-        goto fail_request_irq;
+        printk(KERN_ALERT "ham_drv: failed to request irq %d\n", INTERRUPT_DMA_COMPLETE);
+        goto fail_request_irq_1;
     }
-    printk(KERN_INFO "ham_drv: request irq %d\n", INTERRUPT_NUM);
+    printk(KERN_INFO "ham_drv: request irq %d\n", INTERRUPT_DMA_COMPLETE);
+
+    ret = request_irq(INTERRUPT_DMA_READY, ham_drv_interrupt_dma_ready, 0, "ham_drv", NULL); 
+    if (ret != 0) {
+        printk(KERN_ALERT "ham_drv: failed to request irq %d\n", INTERRUPT_DMA_READY);
+        goto fail_request_irq_2;
+    }
+    printk(KERN_INFO "ham_drv: request irq %d\n", INTERRUPT_DMA_READY);
 
     buffer = kmalloc(DMA_BUFFER_SIZE, GFP_DMA);
     if (buffer == NULL) {
         goto fail_kmalloc_buffer;
     }
 
-    ham_drv_dma_print_registers();
-    unsigned int control_reg = DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_INTERRUPT | DMA_CONTROL_REG_BIT_LEEN;
-    ham_drv_dma_write_reg(control_reg, CONTROL);
-
-    ham_drv_dma_print_registers();
-    ham_drv_dma_write_reg((unsigned int)buffer, WRITEADDRESS);
-    ham_drv_dma_write_reg(DMA_BUFFER_SIZE, LENGTH);
-    ham_drv_dma_write_reg(0, READADDRESS);
-
-    ham_drv_dma_print_registers();
-    ham_drv_dma_write_reg(control_reg | DMA_CONTROL_REG_BIT_GO, CONTROL);
-
-    ham_drv_dma_print_registers();
     printk(KERN_INFO "ham_drv: successfully initialized\n");
     return 0;
 
 fail_kmalloc_buffer:
-    free_irq(INTERRUPT_NUM, 0);
-fail_request_irq:
+    free_irq(INTERRUPT_DMA_READY, 0);
+fail_request_irq_2:
+    free_irq(INTERRUPT_DMA_COMPLETE, 0);
+fail_request_irq_1:
     iounmap(ham_drv_mem);
 fail_ioremap:
     release_mem_region(UINPUT_BASE, UINPUT_SIZE);
@@ -234,9 +245,9 @@ fail_register_chrdev:
 
 static void __exit ham_drv_exit(void)
 {
-    ham_drv_dma_print_data();
     kfree(buffer);
-    free_irq(INTERRUPT_NUM, 0);
+    free_irq(INTERRUPT_DMA_READY, 0);
+    free_irq(INTERRUPT_DMA_COMPLETE, 0);
     iounmap(ham_drv_mem);
     release_mem_region(UINPUT_BASE, UINPUT_SIZE);
     device_destroy(ham_drv_class, MKDEV(major_number, 0));
