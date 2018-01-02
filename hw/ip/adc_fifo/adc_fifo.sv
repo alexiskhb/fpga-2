@@ -2,38 +2,35 @@
 module adc_fifo (
         input wire                 clk,
         input wire                 reset,
-        output reg         [15:0]  avalon_streaming_source_data,
-        output reg                 avalon_streaming_source_valid,
+        output reg         [15:0]  fifo_in_data,
+        output reg                 fifo_in_valid,
 
-        output reg         [31:0]  avalon_master_address,
-        output reg                 avalon_master_read,
-        input wire         [31:0]  avalon_master_readdata,
-        input wire                 avalon_master_waitrequest,
-        output reg                 avalon_master_write,
-        output reg         [31:0]  avalon_master_writedata,
+        output reg         [31:0]  fifo_csr_address,
+        output reg                 fifo_csr_read,
+        input wire         [31:0]  fifo_csr_readdata,
+        input wire                 fifo_csr_waitrequest,
+        output reg                 fifo_csr_write,
+        output reg         [31:0]  fifo_csr_writedata,
 
-        input wire                 avalon_slave_address,
-        input wire                 avalon_slave_chipselect,
-        input wire                 avalon_slave_read,
-        output reg         [15:0]  avalon_slave_readdata,
-        output reg                 avalon_slave_readdatavalid,
-        output reg                 avalon_slave_waitrequest,
+        input wire                 dma_address,
+        input wire                 dma_chipselect,
+        input wire                 dma_read,
+        output reg         [15:0]  dma_readdata,
+        output reg                 dma_readdatavalid,
+        output reg                 dma_waitrequest,
 
-        input wire                 avalon_streaming_sink_valid,
-        input wire         [31:0]  avalon_streaming_sink_data,
+        input wire                 dsp_ss_valid,
+        input wire         [31:0]  dsp_ss_data,
 
-        input wire         [15:0]  avalon_streaming_sink_1_data,
-        input wire         [7:0]   avalon_streaming_sink_1_channel,
-        input wire         [7:0]   avalon_streaming_sink_1_error,
-        input wire                 avalon_streaming_sink_1_valid,
-        output reg                 avalon_streaming_sink_1_ready,
+        input wire         [15:0]  fifo_out_data,
+        input wire         [7:0]   fifo_out_channel,
+        input wire         [7:0]   fifo_out_error,
+        input wire                 fifo_out_valid,
+        output reg                 fifo_out_ready,
 
-        output reg         [31:0]  avalon_streaming_source_1_data,
-        output reg                 avalon_streaming_source_1_valid,
-
-        input wire         [12:0]  avalon_ss_adc_data,
-        input wire                 avalon_ss_adc_valid,
-        input wire         [2:0]   avalon_ss_adc_channel
+        input wire         [12:0]  adc_data,
+        input wire                 adc_valid,
+        input wire         [2:0]   adc_channel
     );
 
     reg [31:0] flag_in;
@@ -63,7 +60,7 @@ module adc_fifo (
         if (reset) begin
             cntr_in <= 0;
         end else begin
-            if (cntr_in < SIZE_FIFO && state == FILL && avalon_ss_adc_valid == 1'b1) begin
+            if (cntr_in < SIZE_FIFO && state == FILL && adc_valid == 1'b1) begin
                 cntr_in <= cntr_in + 1;
             end else if (state == END) begin
                 cntr_in <= 0;
@@ -85,10 +82,10 @@ module adc_fifo (
     end
 
     wire dma_event;
-    assign dma_event = (avalon_streaming_sink_valid == 1'b1 && avalon_streaming_sink_data == DMA_EVENT) ? 1'b1 : 1'b0;
+    assign dma_event = (dsp_ss_valid == 1'b1 && dsp_ss_data == DMA_EVENT) ? 1'b1 : 1'b0;
 
     reg align_event;
-    
+
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
@@ -108,66 +105,64 @@ module adc_fifo (
     begin
         if (reset) begin
             state                           <= FILL;
-            avalon_master_address           <= 4;
-            avalon_master_writedata         <= SIZE_FIFO;
-            avalon_master_write             <= 1'b1;
-            avalon_streaming_source_1_valid <= 0;
-            avalon_streaming_source_1_data  <= 0;
-            avalon_streaming_source_data    <= 0;
-            avalon_streaming_source_valid   <= 0;
-            avalon_slave_readdatavalid      <= 1'b0;
-            avalon_slave_waitrequest        <= 1'b0;
+            fifo_csr_address                <= 4;
+            fifo_csr_writedata              <= SIZE_FIFO;
+            fifo_csr_write                  <= 1'b1;
+            fifo_in_data                    <= 0;
+            fifo_in_valid                   <= 0;
+            dma_readdatavalid               <= 1'b0;
+            dma_waitrequest                 <= 1'b0;
             pause_cntr                      <= 4'd0;
             adc_prev_channel                <= 3'd0;
         end else begin
-            adc_prev_channel <= avalon_ss_adc_channel; 
+            adc_prev_channel <= adc_channel;
             case (state)
                 FILL:
-                    if (cntr_in < SIZE_FIFO && avalon_ss_adc_valid == 1'b0) begin
-                        avalon_streaming_source_valid <= 1'b0;
-                    end else if (cntr_in < SIZE_FIFO && avalon_ss_adc_valid == 1'b1) begin
-                        avalon_streaming_source_valid <= 1'b1;
-                        avalon_streaming_source_data <= avalon_ss_adc_data;
+                    if (cntr_in < SIZE_FIFO && adc_valid == 1'b0) begin
+                        fifo_in_valid <= 1'b0;
+                    end else if (cntr_in < SIZE_FIFO && adc_valid == 1'b1) begin
+                        fifo_in_valid <= 1'b1;
+                        fifo_in_data <= adc_data;
                         state <= PAUSE;
                         state_after_pause <= FILL;
                     end else if (cntr_in >= SIZE_FIFO) begin
-                        avalon_streaming_source_valid <= 1'b0;
+                        fifo_in_valid <= 1'b0;
                         state <= FULL;
                     end
                 FULL:
                     begin
-                        avalon_streaming_source_valid <= 1'b0;
-                        if (align_event == 1'b1 && avalon_ss_adc_channel == 1 && adc_prev_channel == 1) begin
+                        fifo_in_valid <= 1'b0;
+                        if (align_event == 1'b1 && adc_channel == 1 && adc_prev_channel == 1) begin
                             state <= SETUP_DMA;
-                        end else if (avalon_ss_adc_valid == 1'b1) begin
+                        end else if (adc_valid == 1'b1) begin
                             state  <= POP;
                         end
                     end
                 POP:
                     begin
-                        avalon_streaming_sink_1_ready <= 1'b1;
+                        fifo_out_ready <= 1'b1;
                         state <= PUSH;
                     end
                 PUSH:
                     begin
-                        avalon_streaming_sink_1_ready <= 1'b0;
-                        avalon_streaming_source_valid <= 1'b1;
-                        avalon_streaming_source_data <= avalon_ss_adc_data;
+                        fifo_out_ready <= 1'b0;
+                        fifo_in_valid <= 1'b1;
+                        fifo_in_data <= adc_data;
                         state <= PAUSE;
                         state_after_pause <= FULL;
                     end
                 SETUP_DMA:
-                    if (avalon_streaming_sink_1_valid == 1'b1 && avalon_slave_chipselect == 1'b1) begin
-                        avalon_streaming_sink_1_ready <= 1'b1;
+                    if (fifo_out_valid == 1'b1 && dma_chipselect == 1'b1) begin
+                        fifo_out_ready <= 1'b1;
                         state <= TO_DMA;
                     end
                 TO_DMA:
                     if (cntr_out > 32'd0) begin
-                        avalon_slave_readdatavalid <= 1'b1;
-                        avalon_slave_readdata <= avalon_streaming_sink_1_data;
+                        dma_readdatavalid <= 1'b1;
+                        dma_readdata <= fifo_out_data;
                     end else begin
-                        avalon_streaming_sink_1_ready <= 1'b0;
-                        avalon_slave_readdatavalid <= 1'b0;
+                        fifo_out_ready <= 1'b0;
+                        dma_readdatavalid <= 1'b0;
                         state <= END;
                     end
                 PAUSE:

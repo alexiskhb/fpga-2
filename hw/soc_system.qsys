@@ -429,6 +429,46 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -523,7 +563,7 @@
   <parameter name="fifoDepth" value="4096" />
   <parameter name="maxBurstSize" value="32" />
   <parameter name="minimumDmaTransactionRegisterWidth" value="4" />
-  <parameter name="readAddressMap"><![CDATA[<address-map><slave name='adc_fifo.avalon_slave' start='0x0' end='0x100' /></address-map>]]></parameter>
+  <parameter name="readAddressMap"><![CDATA[<address-map><slave name='adc_fifo.avalon_slave_dma' start='0x0' end='0x100' /></address-map>]]></parameter>
   <parameter name="readSlaveAddressWidthMax" value="8" />
   <parameter name="readSlaveDataWidthMax" value="16" />
   <parameter name="softresetEnable" value="true" />
@@ -1383,8 +1423,8 @@
  <connection
    kind="avalon"
    version="17.1"
-   start="adc_fifo.avalon_master"
-   end="sc_fifo_0.csr">
+   start="dsp.avalon_master"
+   end="hps_0.f2h_sdram0_data">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x0000" />
   <parameter name="defaultConnection" value="false" />
@@ -1392,8 +1432,8 @@
  <connection
    kind="avalon"
    version="17.1"
-   start="dsp.avalon_master"
-   end="hps_0.f2h_sdram0_data">
+   start="adc_fifo.avalon_master_csr_fifo"
+   end="sc_fifo_0.csr">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x0000" />
   <parameter name="defaultConnection" value="false" />
@@ -1501,7 +1541,7 @@
    kind="avalon"
    version="17.1"
    start="dma_0.read_master"
-   end="adc_fifo.avalon_slave">
+   end="adc_fifo.avalon_slave_dma">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x0000" />
   <parameter name="defaultConnection" value="false" />
@@ -1518,23 +1558,23 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="adc_fifo.avalon_ss_fifo_in"
+   end="sc_fifo_0.in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="adc.avalon_streaming_source"
    end="adc_fifo.avalon_ss_adc" />
  <connection
    kind="avalon_streaming"
    version="17.1"
    start="dsp.avalon_streaming_source"
-   end="adc_fifo.avalon_streaming_sink" />
- <connection
-   kind="avalon_streaming"
-   version="17.1"
-   start="adc_fifo.avalon_streaming_source"
-   end="sc_fifo_0.in" />
+   end="adc_fifo.avalon_ss_dsp" />
  <connection
    kind="avalon_streaming"
    version="17.1"
    start="sc_fifo_0.out"
-   end="adc_fifo.avalon_streaming_sink_1" />
+   end="adc_fifo.avalon_ss_fifo_out" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="pll_0.refclk" />
  <connection
    kind="clock"
