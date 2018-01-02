@@ -1648,7 +1648,7 @@
    kind="interrupt"
    version="17.1"
    start="hps_0.f2h_irq0"
-   end="dsp.interrupt_sender">
+   end="adc_fifo.interrupt_sender">
   <parameter name="irqNumber" value="5" />
  </connection>
  <connection

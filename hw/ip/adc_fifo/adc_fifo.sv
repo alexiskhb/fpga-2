@@ -30,7 +30,9 @@ module adc_fifo (
 
         input wire         [12:0]  adc_data,
         input wire                 adc_valid,
-        input wire         [2:0]   adc_channel
+        input wire         [2:0]   adc_channel,
+
+        output reg                 irq
     );
 
     reg [31:0] flag_in;
@@ -134,6 +136,7 @@ module adc_fifo (
                         fifo_in_valid <= 1'b0;
                         if (align_event == 1'b1 && adc_channel == 1 && adc_prev_channel == 1) begin
                             state <= SETUP_DMA;
+                            irq <= 1'b1;
                         end else if (adc_valid == 1'b1) begin
                             state  <= POP;
                         end
@@ -152,9 +155,12 @@ module adc_fifo (
                         state_after_pause <= FULL;
                     end
                 SETUP_DMA:
-                    if (fifo_out_valid == 1'b1 && dma_chipselect == 1'b1) begin
-                        fifo_out_ready <= 1'b1;
-                        state <= TO_DMA;
+                    begin
+                        irq <= 1'b0;
+                        if (fifo_out_valid == 1'b1 && dma_chipselect == 1'b1) begin
+                            fifo_out_ready <= 1'b1;
+                            state <= TO_DMA;
+                        end
                     end
                 TO_DMA:
                     if (cntr_out > 32'd0) begin
@@ -173,6 +179,10 @@ module adc_fifo (
                         end else begin
                             pause_cntr <= pause_cntr + 1;
                         end
+                    end
+                END:
+                    begin
+                        state <= FILL;
                     end
             endcase
         end
