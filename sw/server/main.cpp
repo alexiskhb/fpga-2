@@ -113,7 +113,7 @@ private:
             std::vector<data_type> delays(blocks_num);
             process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), post_threshold, hilbert_result, fourier_result);
 
-            const int slice_beg = std::max(post_slice_beg, 0);
+            const int slice_beg = std::min(block_size, std::max(post_slice_beg, 0));
             const int slice_end = std::max(slice_beg, std::min(post_slice_end, block_size));
 
             auto out_delays = std::bind(&WebClientRequest::out_ary, this, delays.begin(), delays.end());
