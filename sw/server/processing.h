@@ -9,7 +9,9 @@
 #include <cstdint>
 
 typedef int16_t data_type;
+typedef uint16_t fourier_type;
+typedef int16_t hilbert_type;
 
 void process_ping_guilbert(const data_type* data, const int blocks_num, const int block_size, 
-                           data_type* data_out, const float threshold, std::vector<data_type>& hilbert_out, 
-                           std::vector<data_type>& fourier_out);
+                           data_type* data_out, const float threshold, std::vector<hilbert_type>& hilbert_out, 
+                           std::vector<fourier_type>& fourier_out);

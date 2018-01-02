@@ -3,8 +3,8 @@
 #include "processing.h"
 
 void process_ping_guilbert(const data_type* data, const int blocks_num, const int block_size, 
-                           data_type* data_out, const float threshold, std::vector<data_type>& hilbert_out,
-                           std::vector<data_type>& fourier_out)
+                           data_type* data_out, const float threshold, std::vector<hilbert_type>& hilbert_out,
+                           std::vector<fourier_type>& fourier_out)
 {
     float out[blocks_num][block_size];
     fftw_complex in_complex[blocks_num][block_size], out_complex[blocks_num][block_size];
