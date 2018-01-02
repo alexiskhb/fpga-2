@@ -78,7 +78,6 @@ public:
     WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024)
     {}
 private:
-    data_type data[4];
     double post_d1 = 0, post_d2 = 0, post_d3 = 0, post_d4 = 0, post_threshold = 0.5;
     int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000;
     int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, post_is_generator_test = 0;
@@ -87,11 +86,12 @@ private:
     {
         std::string s(environment().postBuffer().begin(), environment().postBuffer().end());
         std::stringstream post_ss(s);
-        post_ss >> post_is_generator_test >>
-              post_d1 >> post_d2 >> post_d3 >> post_d4 >> post_slice_beg >> 
-              post_slice_end >> post_threshold >> post_frequency >> post_pulse_len >> 
-              post_amplitude;
         std::cout << "POST:>/" << s << "/<" << std::endl;
+        post_ss >> 
+            post_is_generator_test >>
+            post_d1 >> post_d2 >> post_d3 >> post_d4 >> post_slice_beg >> 
+            post_slice_end >> post_threshold >> post_frequency >> post_pulse_len >> 
+            post_amplitude >> post_sample_rate;
         return true;
     }
 
@@ -108,13 +108,13 @@ private:
             } else {
                 blocks_num = driver.recv(0, data);
             }
-            int block_size = data.size()/blocks_num;
+            const int block_size = data.size()/blocks_num;
 
             std::vector<data_type> delays(blocks_num);
             process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), post_threshold, hilbert_result, fourier_result);
 
-            int slice_beg = std::max(post_slice_beg, 0);
-            int slice_end = std::min(post_slice_end, block_size);
+            const int slice_beg = std::max(post_slice_beg, 0);
+            const int slice_end = std::max(slice_beg, std::min(post_slice_end, block_size));
 
             auto out_delays = std::bind(&WebClientRequest::out_ary, this, delays.begin(), delays.end());
             
@@ -134,7 +134,7 @@ private:
                 out_delays,
                 js_ary({data_0, data_1, data_2}),
                 js_ary({hilbert_0, hilbert_1, hilbert_2}),
-                js_ary({fourier_0, fourier_1, fourier_2}),
+                js_ary({fourier_0, fourier_1, fourier_2})
             });
 
             msg_bind();
@@ -145,22 +145,51 @@ private:
     void out_ary(const std::vector<data_type>::iterator& data_begin, const std::vector<data_type>::iterator& data_end) {
         out << "[";
         for (auto it = data_begin; it != data_end; ++it) {
-            out << *it << (std::next(it) == data_end ? "]" : ","); 
+            out << *it << (std::next(it) == data_end ? "" : ","); 
         }
+        out << "]";
     }
 
     void out_indexed_ary(const std::vector<data_type>::iterator& data_begin, const std::vector<data_type>::iterator& data_end) {
         int i = 0;
         out << "[";
         for (auto it = data_begin; it != data_end; ++it, ++i) {
-            out << '[' << i << ',' << *it << (std::next(it) == data_end ? "]]" : "],"); 
+            out << '[' << i << ',' << *it << (std::next(it) == data_end ? "]" : "],"); 
         }
+        out << "]";
     }
 
+    // see js_obj
+    std::function<void()> js_ary(const std::vector<data_type>::iterator& data_begin, const std::vector<data_type>::iterator& data_end) {
+        return std::bind(&WebClientRequest::out_ary, this, data_begin, data_end);
+    }
+
+    // see js_obj
     std::function<void()> js_ary(const std::vector<std::function<void()>>& fs) {
         return std::bind(&WebClientRequest::js_ary_impl, this, fs);
     }
 
+    // Usage:
+    // js_obj({key_1, key_2, ..., key_n}, {value_1, value_2, ..., value_n})
+    // where key_i are convertible to std::string, value_i are objects of type std::function<void()>
+    // e.g.
+    // 1.
+    //     void value(int k) {
+    //         out << k;
+    //     }
+    //     std::function<void()> f1 = std::bind(value, 10)
+    //     std::function<void()> f2 = std::bind(value, 20)
+    //     std::function<void()> obj_bind = js_obj({"key_1", "key_2"}, {f1, f2})
+    //
+    // on call operator() of obj_bind get {"key_1":10,"key_2":20} in out
+    //
+    // 2.
+    //     std::function<void()> f = std::bind(value, 10)
+    //     std::function<void()> array_of_values = js_ary({f, f, f})
+    //     std::function<void()> obj_bind = js_obj({"key"}, array_of_values)
+    //
+    // obj_bind() ==> {"key":[10,10,10]}
+    // js_ary({obj_bind, array_of_values, f})() ==> [{"key":[10,10,10]}, [10,10,10], 10]
     std::function<void()> js_obj(const std::vector<std::string>& keys, const std::vector<std::function<void()>>& values) {
         return std::bind(&WebClientRequest::js_obj_impl, this, keys, values);
     }
@@ -169,8 +198,9 @@ private:
         out << "[";
         for (unsigned i = 0; i < fs.size(); i++) {
             fs[i]();
-            out << (i < fs.size() - 1 ? "," : "]");
+            out << (i < fs.size() - 1 ? "," : "");
         }
+        out << "]";
     }
 
     void js_obj_impl(const std::vector<std::string>& keys, const std::vector<std::function<void()>>& values) {
@@ -178,8 +208,9 @@ private:
         for (unsigned i = 0; i < keys.size(); i++) {
             out << '"' << keys[i].c_str() << "\":";
             values[i]();
-            out << (i < keys.size() - 1 ? "," : "}");
+            out << (i < keys.size() - 1 ? "," : "");
         }
+        out << "}";
     }
 };
 
