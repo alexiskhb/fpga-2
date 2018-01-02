@@ -65,6 +65,14 @@
          type = "String";
       }
    }
+   element fft_ii_0
+   {
+      datum _sortIndex
+      {
+         value = "14";
+         type = "int";
+      }
+   }
    element fpga_only_master
    {
       datum _sortIndex
@@ -573,6 +581,24 @@
   <parameter name="writeSlaveDataWidthMax" value="32" />
  </module>
  <module name="dsp" kind="dsp" version="1.0" enabled="1" />
+ <module name="fft_ii_0" kind="altera_fft_ii" version="17.1" enabled="1">
+  <parameter name="data_flow" value="Streaming" />
+  <parameter name="data_rep">Block Floating Point</parameter>
+  <parameter name="design_env" value="QSYS" />
+  <parameter name="direction" value="Bi-directional" />
+  <parameter name="dsp_resource_opt" value="false" />
+  <parameter name="engine_arch" value="Quad Output" />
+  <parameter name="hard_fp" value="false" />
+  <parameter name="hyper_opt" value="false" />
+  <parameter name="in_order" value="Natural" />
+  <parameter name="in_width" value="16" />
+  <parameter name="length" value="256" />
+  <parameter name="num_engines" value="1" />
+  <parameter name="out_order" value="Natural" />
+  <parameter name="out_width" value="29" />
+  <parameter name="selected_device_family" value="Cyclone V" />
+  <parameter name="twid_width" value="16" />
+ </module>
  <module
    name="fpga_only_master"
    kind="altera_jtag_avalon_master"
@@ -1558,6 +1584,11 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="adc_fifo.avalon_ss_fft_in"
+   end="fft_ii_0.sink" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="adc_fifo.avalon_ss_fifo_in"
    end="sc_fifo_0.in" />
  <connection
@@ -1575,6 +1606,11 @@
    version="17.1"
    start="sc_fifo_0.out"
    end="adc_fifo.avalon_ss_fifo_out" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="fft_ii_0.source"
+   end="adc_fifo.avalon_ss_fft_out" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="pll_0.refclk" />
  <connection
    kind="clock"
@@ -1599,6 +1635,7 @@
    end="hps_only_master.clk" />
  <connection kind="clock" version="17.1" start="pll_0.outclk2" end="sc_fifo_0.clk" />
  <connection kind="clock" version="17.1" start="pll_0.outclk2" end="dma_0.clk" />
+ <connection kind="clock" version="17.1" start="pll_0.outclk2" end="fft_ii_0.clk" />
  <connection
    kind="clock"
    version="17.1"
@@ -1724,6 +1761,11 @@
    version="17.1"
    start="clk_0.clk_reset"
    end="adc_fifo.reset_sink" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="fft_ii_0.rst" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
 </system>

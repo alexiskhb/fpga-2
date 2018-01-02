@@ -32,7 +32,21 @@ module adc_fifo (
         input wire                 adc_valid,
         input wire         [2:0]   adc_channel,
 
-        output reg                 irq
+        output reg                 irq,
+
+        output reg         [32:0]  fft_in_data,
+        output reg                 fft_in_eop,
+        output reg         [1:0]   fft_in_err,
+        input wire                 fft_in_ready,
+        output reg                 fft_in_sop,
+        output reg                 fft_in_valid,
+
+        input wire         [37:0]  fft_out_data,
+        input wire                 fft_out_eop,
+        input wire         [1:0]   fft_out_err,
+        output reg                 fft_out_ready,
+        input wire                 fft_out_sop,
+        input wire                 fft_out_valid
     );
 
     reg [31:0] flag_in;
@@ -55,7 +69,8 @@ module adc_fifo (
             , PAUSE     = 8'd7
             , END       = 8'd8
             , DMA_EVENT = 32'd123
-            , SIZE_FIFO = 32'd3072;
+            , SIZE_FIFO = 32'd3072
+            , SIZE_FFT  = 32'd256;
 
     always @ (posedge clk or posedge reset)
     begin
@@ -116,30 +131,46 @@ module adc_fifo (
             dma_waitrequest                 <= 1'b0;
             pause_cntr                      <= 4'd0;
             adc_prev_channel                <= 3'd0;
+            fft_in_valid                    <= 1'b0;
         end else begin
             adc_prev_channel <= adc_channel;
             case (state)
                 FILL:
-                    if (cntr_in < SIZE_FIFO && adc_valid == 1'b0) begin
+                    if (cntr_in < SIZE_FFT && adc_valid == 1'b0) begin
                         fifo_in_valid <= 1'b0;
-                    end else if (cntr_in < SIZE_FIFO && adc_valid == 1'b1) begin
+                        fft_in_valid <= 1'b0;
+                    end else if (cntr_in < SIZE_FFT && adc_valid == 1'b1 && adc_channel == 2 && fft_in_ready == 1) begin
+                        if (cntr_in == 0) begin
+                            fft_in_sop <= 1'b1;
+                            fft_in_eop <= 1'b0;
+                        end else if (cntr_in == 255) begin
+                            fft_in_sop <= 1'b0;
+                            fft_in_eop <= 1'b1;
+                        end  else begin
+                            fft_in_sop <= 1'b0;
+                            fft_in_eop <= 1'b0;
+                        end
                         fifo_in_valid <= 1'b1;
                         fifo_in_data <= adc_data;
+                        fft_in_valid <= 1'b1;
+                        fft_in_data <= {adc_data[12], 3'b0, adc_data[11:0], 17'b0};
                         state <= PAUSE;
                         state_after_pause <= FILL;
-                    end else if (cntr_in >= SIZE_FIFO) begin
+                    end else if (cntr_in >= SIZE_FFT) begin
                         fifo_in_valid <= 1'b0;
+                        fft_in_valid <= 1'b0;
                         state <= FULL;
                     end
                 FULL:
                     begin
-                        fifo_in_valid <= 1'b0;
-                        if (align_event == 1'b1 && adc_channel == 1 && adc_prev_channel == 1) begin
-                            state <= SETUP_DMA;
-                            irq <= 1'b1;
-                        end else if (adc_valid == 1'b1) begin
-                            state  <= POP;
-                        end
+                        // fifo_in_valid <= 1'b0;
+                        // if (align_event == 1'b1 && adc_channel == 1 && adc_prev_channel == 1) begin
+                        //     state <= SETUP_DMA;
+                        //     irq <= 1'b1;
+                        // end else if (adc_valid == 1'b1) begin
+                        //     state  <= POP;
+                        // end
+                        fft_out_ready <= 1'b1;
                     end
                 POP:
                     begin
