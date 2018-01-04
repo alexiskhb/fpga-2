@@ -4,8 +4,12 @@ const fastcgiAddress = "/sv";
 const invNs = 1e8;
 const speedOfSound = 1500;
 
-// Array of flot librar objects
-let plots = [];
+const chartContainerPrefix = 'chart';
+
+// Array of canvasjs library objects
+let plots = {};
+
+let isFirstLoad = true;
 
 // Needed to stop polling by interval
 let intervalHandler = 0;
@@ -13,7 +17,10 @@ let intervalHandler = 0;
 // Needed to restore size of charts
 let defaultChartWidth = 0;
 let defaultChartHeight = 0;
-let is_generator_test = 0;
+let isGeneratorTest = 0;
+
+let chartRows = 0;
+let chartCols = 0;
 
 $(document).ready(function() {
     $("#pingButton").click(function() {
@@ -28,6 +35,33 @@ $(document).ready(function() {
         return result;
     }
 
+    function createChartContainers(rows, cols) {
+        for (let j = 0; j < cols; j++) {
+            for (let i = 0; i < rows; i++) {
+                let containerName = (chartContainerPrefix + i) + j;
+                plots[containerName] = {
+                    name: containerName,
+                    chart: new CanvasJS.Chart(containerName, {
+                        zoomEnabled: true,
+                        zoomType: "x, y",
+                        data: [{
+                            type: "line",
+                            dataPoints: [{x:0, y:0}]
+                        }]
+                    })
+                };
+            }
+        }
+    }
+
+    function initDefaultChartSize() {
+        defaultChartWidth = $(document.getElementById(chartContainerPrefix + '00')).width();
+        defaultChartHeight = $(document.getElementById(chartContainerPrefix + '00')).height();
+    }
+
+    function toPointObjectCallback(pointArr) {
+        return {x:pointArr[0], y:pointArr[1]};
+    }
 
     function updateContents() {
         // Read coordinates of receivers
@@ -54,41 +88,41 @@ $(document).ready(function() {
         let sampleRate = document.getElementById('sampleRate').value; 
 
         // Post-query to server is space separated array of parameters for signal generator
-        let postData = spacify([is_generator_test, d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
+        let postData = spacify([isGeneratorTest, d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
 
-        let options = [{
-                xaxis: {
-                    tickDecimals: 1,
-                },
-                colors: ["#0022FF", "#00FF22"]
-            }, {
-                xaxis: {
-                    tickDecimals: 1,
-                }
-            }];
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
             data: postData,
-            success: function(result) {
-                result = JSON.parse(result);
-                document.getElementById('result2').innerHTML = result.delays;
-                chartRows = result.data.length;
+            success: function(response) {
+                response = JSON.parse(response);
+                document.getElementById('result2').innerHTML = response.delays;
+                chartRows = response.data.length;
                 chartCols = 2;
-                // Save references to plots to be able
-                // to resize them later
-                while (plots.length < result.data.length + result.fourier.length) {
-                    plots.push(0);
+
+                if (isFirstLoad) {
+                    isFirstLoad = false;
+                    createChartContainers(chartRows, chartCols);
+                    initDefaultChartSize();
                 }
                 // _______________________
                 // | chart00  |  chart01 |
                 // | chart10  |  chart11 |
                 // | chart20  |  chart21 |
-                for (let i = 0; i < result.data.length; i++) {
-                    plots[i] = $.plot(("#chart" + i) + 0, [result.data[i]], options[0]);
-                }
-                for (let i = 0; i < result.fourier.length; i++) {
-                    plots[result.data.length + i] = $.plot(("#chart" + i) + 1, [result.fourier[i]], options[1]);
+                for (let i = 0; i < response.data.length; i++) {
+                    let containerName0 = (chartContainerPrefix + i) + '0';
+                    plots[containerName0].chart.options.data = [{
+                        type: "line",
+                        dataPoints: response.data[i].map(toPointObjectCallback)
+                    }];
+                    plots[containerName0].chart.render();
+                    
+                    let containerName1 = (chartContainerPrefix + i) + '1';
+                    plots[containerName1].chart.options.data = [{
+                        type: "line",
+                        dataPoints: response.fourier[i].map(toPointObjectCallback)
+                    }];
+                    plots[containerName1].chart.render();
                 }
             }
         });
@@ -104,17 +138,14 @@ $(document).ready(function() {
     // Executes when the page loads
     $(window).on("load", function(e) {
         updateInterval();
-        defaultChartWidth = $(document.getElementById('chart00')).width();
-        defaultChartHeight = $(document.getElementById('chart00')).height();
         toggleGeneratorControls();
-        is_generator_test = 0;
+        isGeneratorTest = 0;
     });
 
     function resizeCharts() {
-        for (let i = 0; i < plots.length; i++) {
-            plots[i].resize();
-            plots[i].setupGrid();
-            plots[i].draw();
+        let props = Object.getOwnPropertyNames(plots);
+        for (let i = 0; i < props.length; i++) {
+            plots[props[i]].chart.render();
         }
     }
 
@@ -125,7 +156,7 @@ $(document).ready(function() {
         resizeCharts();
     });
 
-    $("#pollPeriod").bind('keyup mouseup', function () {
+    $("#pollPeriod").bind('keyup mouseup', function() {
         clearInterval(intervalHandler);
         updateInterval();
     }); 
@@ -133,7 +164,7 @@ $(document).ready(function() {
     // Hide and show controls panel
     function toggleGeneratorControls() {
         $(document.getElementById("generatorControls")).toggle();
-        is_generator_test = 1 - is_generator_test;
+        isGeneratorTest = $("#generatorControls").is(":visible") ? 1 : 0;
     }
 
     $("#toggleControlsBtn").click(function() {
@@ -143,7 +174,7 @@ $(document).ready(function() {
     $("#restoreSizeBtn").click(function() {
         for (let i = 0; i < chartRows; i++) {
             for (let j = 0; j < chartCols; j++) {
-                document.getElementById(('chart' + i) + j).setAttribute("style", 
+                document.getElementById((chartContainerPrefix + i) + j).setAttribute("style", 
                     "width:" + defaultChartWidth + 
                     ";height:" + defaultChartHeight + 
                     ";position:relative");
