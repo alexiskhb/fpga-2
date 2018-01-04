@@ -29,7 +29,7 @@ public:
         // ioctl(fd, cmd, reinterpret_cast<char*>(data));
     }
 
-    int recv(int cmd, std::vector<data_type>& out_data) 
+    int recv(int cmd, vec1d<data_type>& out_data) 
     {
         int blocks_num = 3;
         int block_size = 1024;
@@ -113,37 +113,37 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
-            std::vector<data_type> data;
-            std::vector<fourier_type> fourier_result;
-            std::vector<hilbert_type> hilbert_result;
-            int blocks_num;
+
+            vec2d<data_type> data;
+            vec2d<fourier_type> fourier_result;
+            vec2d<hilbert_type> hilbert_result;
             if (post_is_simulator_test) {
-                blocks_num = 3;
                 data = Pinger{post_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
             } else {
-                blocks_num = driver.recv(0, data);
+                data = vec2d<data_type>(3, vec1d<data_type>(256));
             }
-            const int block_size = data.size()/blocks_num;
+            const int blocks_num = data.size();
+            const int block_size = data.front().size();
 
-            std::vector<data_type> delays(blocks_num);
-            process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), post_threshold, hilbert_result, fourier_result);
+            vec1d<data_type> delays(blocks_num);
+            process_ping_guilbert(data, post_threshold, delays, hilbert_result, fourier_result);
 
             const int slice_beg = std::min(block_size, std::max(post_slice_beg, 0));
             const int slice_end = std::max(slice_beg, std::min(post_slice_end, block_size));
 
             auto out_delays = std::bind(&WebClientRequest::out_ary<data_type>, this, delays.begin(), delays.end());
             
-            auto data_0 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 0*block_size + slice_beg, data.begin() + 0*block_size + slice_end);
-            auto data_1 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 1*block_size + slice_beg, data.begin() + 1*block_size + slice_end);
-            auto data_2 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 2*block_size + slice_beg, data.begin() + 2*block_size + slice_end);
+            auto data_0 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data[0].begin() + slice_beg, data[0].begin() + slice_end);
+            auto data_1 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data[1].begin() + slice_beg, data[1].begin() + slice_end);
+            auto data_2 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data[2].begin() + slice_beg, data[2].begin() + slice_end);
 
-            auto hilbert_0 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 0*block_size + slice_beg, hilbert_result.begin() + 0*block_size + slice_end);
-            auto hilbert_1 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 1*block_size + slice_beg, hilbert_result.begin() + 1*block_size + slice_end);
-            auto hilbert_2 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 2*block_size + slice_beg, hilbert_result.begin() + 2*block_size + slice_end);
+            auto hilbert_0 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result[0].begin() + slice_beg, hilbert_result[0].begin() + slice_end);
+            auto hilbert_1 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result[1].begin() + slice_beg, hilbert_result[1].begin() + slice_end);
+            auto hilbert_2 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result[2].begin() + slice_beg, hilbert_result[2].begin() + slice_end);
 
-            auto fourier_0 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 0*block_size + slice_beg, fourier_result.begin() + 0*block_size + slice_end);
-            auto fourier_1 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 1*block_size + slice_beg, fourier_result.begin() + 1*block_size + slice_end);
-            auto fourier_2 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 2*block_size + slice_beg, fourier_result.begin() + 2*block_size + slice_end);
+            auto fourier_0 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result[0].begin() + slice_beg, fourier_result[0].begin() + slice_end);
+            auto fourier_1 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result[1].begin() + slice_beg, fourier_result[1].begin() + slice_end);
+            auto fourier_2 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result[2].begin() + slice_beg, fourier_result[2].begin() + slice_end);
 
             auto msg_bind = js_obj({"delays", "data", "hilbert", "fourier"}, {
                 out_delays,
@@ -158,7 +158,7 @@ private:
     }
 
     template <class T>
-    void out_ary(const typename std::vector<T>::iterator& data_begin, const typename std::vector<T>::iterator& data_end) {
+    void out_ary(const typename vec1d<T>::iterator& data_begin, const typename vec1d<T>::iterator& data_end) {
         out << "[";
         for (auto it = data_begin; it != data_end; ++it) {
             out << *it << (std::next(it) == data_end ? "" : ","); 
@@ -167,7 +167,7 @@ private:
     }
 
     template <class T>
-    void out_indexed_ary(const typename std::vector<T>::iterator& data_begin, const typename std::vector<T>::iterator& data_end) {
+    void out_indexed_ary(const typename vec1d<T>::iterator& data_begin, const typename vec1d<T>::iterator& data_end) {
         int i = 0;
         out << "[";
         for (auto it = data_begin; it != data_end; ++it, ++i) {
@@ -177,7 +177,7 @@ private:
     }
 
     // see js_obj
-    std::function<void()> js_ary(const std::vector<std::function<void()>>& fs) {
+    std::function<void()> js_ary(const vec1d<std::function<void()>>& fs) {
         return std::bind(&WebClientRequest::js_ary_impl, this, fs);
     }
 
@@ -202,11 +202,11 @@ private:
     //
     // obj_bind() ==> {"key":[10,10,10]}
     // js_ary({obj_bind, array_of_values, f})() ==> [{"key":[10,10,10]}, [10,10,10], 10]
-    std::function<void()> js_obj(const std::vector<std::string>& keys, const std::vector<std::function<void()>>& values) {
+    std::function<void()> js_obj(const vec1d<std::string>& keys, const vec1d<std::function<void()>>& values) {
         return std::bind(&WebClientRequest::js_obj_impl, this, keys, values);
     }
 private:
-    void js_ary_impl(const std::vector<std::function<void()>>& fs) {
+    void js_ary_impl(const vec1d<std::function<void()>>& fs) {
         out << "[";
         for (unsigned i = 0; i < fs.size(); i++) {
             fs[i]();
@@ -215,7 +215,7 @@ private:
         out << "]";
     }
 
-    void js_obj_impl(const std::vector<std::string>& keys, const std::vector<std::function<void()>>& values) {
+    void js_obj_impl(const vec1d<std::string>& keys, const vec1d<std::function<void()>>& values) {
         out << "{";
         for (unsigned i = 0; i < keys.size(); i++) {
             out << '"' << keys[i].c_str() << "\":";

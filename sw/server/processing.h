@@ -12,6 +12,14 @@ typedef int16_t data_type;
 typedef uint16_t fourier_type;
 typedef int16_t hilbert_type;
 
-void process_ping_guilbert(const data_type* data, const int blocks_num, const int block_size, 
-                           data_type* data_out, const float threshold, std::vector<hilbert_type>& hilbert_out, 
-                           std::vector<fourier_type>& fourier_out);
+template <class T>
+using vec1d = std::vector<T>;
+
+template <class T>
+using vec2d = vec1d<vec1d<T>>;
+
+void process_ping_guilbert(const vec2d<data_type>& data, 
+                           const float threshold,
+                           vec1d<data_type>& data_out, 
+                           vec2d<hilbert_type>& hilbert_out, 
+                           vec2d<fourier_type>& fourier_out);

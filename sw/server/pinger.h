@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <iostream>
+#include "processing.h"
 
 class Pinger {
 public:
@@ -14,24 +15,24 @@ public:
             "\nblock size: " << block_size << std::endl;
     }
 
-    std::vector<data_type> generate(const std::vector<double>& distances/*meters*/) 
+    vec2d<data_type> generate(const vec1d<double>& distances/*meters*/) 
     {
-        double min_dist = distances.front();
-        for (int d: distances) {
+        auto min_dist = distances.front();
+        for (auto d: distances) {
             if (d < min_dist) {
                 min_dist = d;
             }
         }
         int blocks_num = distances.size();
-        std::vector<data_type> result(block_size * blocks_num);
+        vec2d<data_type> result(blocks_num, vec1d<data_type>(block_size));
         m_generate_data(block_size);
         for (int i = 0; i < blocks_num; i++) {
-            m_generate_impl(result.begin() + block_size*i, distances[i] - min_dist);
+            m_generate_impl(result[i].begin(), distances[i] - min_dist);
         }
         return result;
     }
 private:
-    void m_generate_impl(const std::vector<data_type>::iterator begin, double dist)
+    void m_generate_impl(const vec1d<data_type>::iterator begin, double dist)
     {
         double speed_of_sound = 1468.5;
         // I don't know why 1000000
@@ -58,5 +59,10 @@ private:
     }
     const int measures_per_ms = 1000;
     int freq, pulse_len, ampl, block_size, sample_rate;
-    std::vector<data_type> data;
+    vec1d<data_type> data;
+};
+
+class Context {
+public:
+
 };
