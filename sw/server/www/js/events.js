@@ -4,6 +4,10 @@ const fastcgiAddress = "/sv";
 const invNs = 1e8;
 const speedOfSound = 1500;
 
+// ___________________________________
+// | chart00 | chart01 | chart02 | ...
+// | chart10 | chart11 | chart12 | ...
+// | chart20 | chart21 |   ...   | ...
 const chartContainerPrefix = 'chart';
 
 // Array of canvasjs library objects
@@ -17,7 +21,7 @@ let intervalHandler = 0;
 // Needed to restore size of charts
 let defaultChartWidth = 0;
 let defaultChartHeight = 0;
-let isGeneratorTest = 0;
+let simulatorPanelEnabled = 0;
 
 let chartRows = 0;
 let chartCols = 0;
@@ -36,8 +40,19 @@ $(document).ready(function() {
     }
 
     function createChartContainers(rows, cols) {
-        for (let j = 0; j < cols; j++) {
-            for (let i = 0; i < rows; i++) {
+        for (let i = 0; i < rows; i++) {
+            let row = $('<tr>');
+            for (let j = 0; j < cols; j++) {
+                let containerName = (chartContainerPrefix + i) + j;
+                let td = $('<td>').attr('class', 'resizabletd').append(
+                    $('<div>').attr('class', 'resizableDiv').attr('id', containerName)
+                );
+                row.append(td);         
+            }
+            $('#chartsTable').append(row);
+        }
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
                 let containerName = (chartContainerPrefix + i) + j;
                 plots[containerName] = {
                     name: containerName,
@@ -87,8 +102,8 @@ $(document).ready(function() {
         let amplitude = document.getElementById('amplitude').value;
         let sampleRate = document.getElementById('sampleRate').value; 
 
-        // Post-query to server is space separated array of parameters for signal generator
-        let postData = spacify([isGeneratorTest, d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
+        // Post-query to server is space separated array of parameters for signal simulator
+        let postData = spacify([simulatorPanelEnabled, d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
 
         $.ajax({
             url: fastcgiAddress,
@@ -96,7 +111,7 @@ $(document).ready(function() {
             data: postData,
             success: function(response) {
                 response = JSON.parse(response);
-                document.getElementById('result2').innerHTML = response.delays;
+                document.getElementById('delays').innerHTML = response.delays;
                 chartRows = response.data.length;
                 chartCols = 2;
 
@@ -105,10 +120,7 @@ $(document).ready(function() {
                     createChartContainers(chartRows, chartCols);
                     initDefaultChartSize();
                 }
-                // _______________________
-                // | chart00  |  chart01 |
-                // | chart10  |  chart11 |
-                // | chart20  |  chart21 |
+
                 for (let i = 0; i < response.data.length; i++) {
                     let containerName0 = (chartContainerPrefix + i) + '0';
                     plots[containerName0].chart.options.data = [{
@@ -138,8 +150,7 @@ $(document).ready(function() {
     // Executes when the page loads
     $(window).on("load", function(e) {
         updateInterval();
-        toggleGeneratorControls();
-        isGeneratorTest = 0;
+        $(document.getElementById("simulatorControls")).hide();
     });
 
     function resizeCharts() {
@@ -152,7 +163,7 @@ $(document).ready(function() {
     // Resize chart after dragging of corner.
     // We don't know what exactly chart has been resized,
     // so update everything
-    $(".resizeableDiv").mouseup(function() {
+    $("#chartsTable").mouseup(function() {
         resizeCharts();
     });
 
@@ -162,13 +173,13 @@ $(document).ready(function() {
     }); 
 
     // Hide and show controls panel
-    function toggleGeneratorControls() {
-        $(document.getElementById("generatorControls")).toggle();
-        isGeneratorTest = $("#generatorControls").is(":visible") ? 1 : 0;
+    function toggleSimulatorControls() {
+        $(document.getElementById("simulatorControls")).toggle();
+        simulatorPanelEnabled = $("#simulatorControls").is(":visible") ? 1 : 0;
     }
 
-    $("#toggleControlsBtn").click(function() {
-        toggleGeneratorControls();
+    $("#toggleSimulatorControls").click(function() {
+        toggleSimulatorControls();
     });
 
     $("#restoreSizeBtn").click(function() {
