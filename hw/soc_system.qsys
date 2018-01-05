@@ -65,6 +65,14 @@
          type = "String";
       }
    }
+   element fft_dft_0
+   {
+      datum _sortIndex
+      {
+         value = "14";
+         type = "int";
+      }
+   }
    element fpga_only_master
    {
       datum _sortIndex
@@ -469,6 +477,30 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -573,6 +605,7 @@
   <parameter name="writeSlaveDataWidthMax" value="32" />
  </module>
  <module name="dsp" kind="dsp" version="1.0" enabled="1" />
+ <module name="fft_dft_0" kind="fft_dft" version="1.0" enabled="1" />
  <module
    name="fpga_only_master"
    kind="altera_jtag_avalon_master"
@@ -1573,6 +1606,16 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="adc_fifo.fft_in"
+   end="fft_dft_0.fft_in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="fft_dft_0.fft_out"
+   end="adc_fifo.fft_out" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="sc_fifo_0.out"
    end="adc_fifo.avalon_ss_fifo_out" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="pll_0.refclk" />
@@ -1599,6 +1642,7 @@
    end="hps_only_master.clk" />
  <connection kind="clock" version="17.1" start="pll_0.outclk2" end="sc_fifo_0.clk" />
  <connection kind="clock" version="17.1" start="pll_0.outclk2" end="dma_0.clk" />
+ <connection kind="clock" version="17.1" start="pll_0.outclk2" end="fft_dft_0.clk" />
  <connection
    kind="clock"
    version="17.1"
@@ -1699,6 +1743,11 @@
    end="jtag_uart.reset" />
  <connection kind="reset" version="17.1" start="clk_0.clk_reset" end="pll_0.reset" />
  <connection kind="reset" version="17.1" start="clk_0.clk_reset" end="dma_0.reset" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="fft_dft_0.reset" />
  <connection
    kind="reset"
    version="17.1"
