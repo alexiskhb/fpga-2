@@ -41,48 +41,6 @@ module adc_fifo (
 
     );
 
-    // reg         [32:0]  fft_in_data,
-    reg         [15:0]  fft_in_real;
-    reg         [15:0]  fft_in_imag;
-    reg                 fft_in_inverse;
-    reg                 fft_in_eop;
-    reg         [1:0]   fft_in_err;
-    wire                fft_in_ready;
-    reg                 fft_in_sop;
-    reg                 fft_in_valid;
-
-    // wire         [37:0]  fft_out_data;
-    wire         [15:0]  fft_out_real;
-    wire         [15:0]  fft_out_imag;
-    wire         [5:0]   fft_out_exp;
-    wire                 fft_out_eop;
-    wire         [1:0]   fft_out_err;
-    reg                  fft_out_ready;
-    wire                 fft_out_sop;
-    wire                 fft_out_valid;
-
-    reg next;
-    // wire next_out;
-    wire [15:0] X0;
-    wire [15:0] Y0;
-    wire [15:0] X1;
-    wire [15:0] Y1;
-    wire [15:0] X2;
-    wire [15:0] Y2;
-    wire [15:0] X3;
-    wire [15:0] Y3;
-
-    // dft_top fft_gen (
-    //     .clk     (clk),
-    //     .reset   (reset),
-    //     .next    (next),
-    //     .next_out(next_out),
-    //     .X0(X0), .Y0(Y0),
-    //     .X1(X1), .Y1(Y1),
-    //     .X2(X2), .Y2(Y2),
-    //     .X3(X3), .Y3(Y3)
-    // );
-
     reg [31:0] flag_in;
     reg [31:0] flag_out;
 
@@ -96,8 +54,7 @@ module adc_fifo (
 
     reg [4:0] pause_cntr;
 
-   // reg [15:0] in [255:0];
-   reg [15:0] in [511:0];
+   reg [15:0] in [511:0];//511 || 255?
 
    reg [15:0] out [511:0];
 
@@ -200,8 +157,6 @@ module adc_fifo (
         end
     end
 
-
-
     reg [2:0] adc_prev_channel;
     reg flag_fft_out;
 
@@ -218,8 +173,8 @@ module adc_fifo (
             dma_waitrequest                 <= 1'b0;
             pause_cntr                      <= 4'd0;
             adc_prev_channel                <= 3'd0;
-            fft_in_valid                    <= 1'b0;
-            fft_in_inverse                  <= 1'b0;
+            // fft_in_valid                    <= 1'b0;
+            // fft_in_inverse                  <= 1'b0;
             flag_fft_out                    <= 1'b0;
         end else begin
             adc_prev_channel <= adc_channel;
@@ -239,7 +194,7 @@ module adc_fifo (
                         state_after_pause <= FILL;
                     end else if (cntr_in >= SIZE_FFT) begin
                         fifo_in_valid <= 1'b0;
-                        next <= 1'b1;
+                        next_in <= 1'b1;
                         state <= FULL;
                     end else begin
                         fifo_in_valid <= 1'b0;
@@ -254,15 +209,16 @@ module adc_fifo (
                         //     state  <= POP;
                         // end
                         // fft_out_ready <= 1'b1;
-                        next <= 1'b0;
+                        next_in <= 1'b0;
                         if (fft_cntr_in < 128) begin
                            // if (fft_cntr_in == 0) begin
                            //    next <= 1'b1;
                            // end
-                           X0 <= in[fft_cntr_in * 2];
-                           X1 <= 16'b0;
-                           X2 <= in[fft_cntr_in * 2 + 1];
-                           X3 <= 16'b0;
+                           // X0 <= in[fft_cntr_in * 2];
+                           // X1 <= 16'b0;
+                           // X2 <= in[fft_cntr_in * 2 + 1];
+                           // X3 <= 16'b0;
+                           X <= {in[fft_cntr_in * 2], in[fft_cntr_in * 2 + 1]};
                         end else begin
                            state <= PUSH;
                         end
@@ -286,10 +242,10 @@ module adc_fifo (
                            flag_fft_out <= 1'b1;
                         end else if (flag_fft_out == 1) begin
                            if (fft_cntr_out < 128) begin
-                              out[fft_cntr_out * 4] <= Y0;
-                              out[fft_cntr_out * 4 + 1] <= Y1;
-                              out[fft_cntr_out * 4 + 2] <= Y2;
-                              out[fft_cntr_out * 4 + 3] <= Y3;
+                              out[fft_cntr_out * 4] <= Y[63:48];
+                              out[fft_cntr_out * 4 + 1] <= Y[47:32];
+                              out[fft_cntr_out * 4 + 2] <= Y[31:16];
+                              out[fft_cntr_out * 4 + 3] <= Y[15:0];
                            end else begin
                               state <= FILL_FIFO_FFT;
                            end
