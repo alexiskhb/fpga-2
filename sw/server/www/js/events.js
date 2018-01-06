@@ -4,11 +4,20 @@ const fastcgiAddress = "/sv";
 const invNs = 1e8;
 const speedOfSound = 1500;
 
-// ___________________________________
-// | chart00 | chart01 | chart02 | ...
-// | chart10 | chart11 | chart12 | ...
-// | chart20 | chart21 |   ...   | ...
+// __________________________
+// | chart00 | chart01 | ...
+// | chart10 | chart11 | ...
+// | chart20 | chart21 | ...
+// |   ...   |   ...   | ...
 const chartContainerPrefix = 'chart';
+
+// use host?<transposedGetParameter>=1
+// to see transposed table:
+// ___________________________________
+// | chart00 | chart10 | chart20 | ...
+// | chart01 | chart11 | chart21 | ...
+// |   ...   |   ...   |   ...   | ...
+const transposedGetParameter = 'transposed';
 
 // Array of canvasjs library objects
 let plots = {};
@@ -31,11 +40,28 @@ $(document).ready(function() {
         updateContents();
     });
 
-    function createChartContainers(rows, cols) {
-        for (let i = 0; i < rows; i++) {
+    function findGetParameter(parameterName) {
+        var result = 0,
+        tmp = [];
+        var items = location.search.substr(1).split("&");
+        for (var index = 0; index < items.length; index++) {
+            tmp = items[index].split("=");
+            if (tmp[0] === parameterName) {
+                result = decodeURIComponent(tmp[1]);
+            }
+        }
+        return result;
+    }
+
+    function createHtmlTable(rows, cols, transposed) {
+        let actualRows = transposed ? cols : rows;
+        let actualCols = transposed ? rows : cols;
+        for (let i = 0; i < actualRows; i++) {
             let row = $('<tr>');
-            for (let j = 0; j < cols; j++) {
-                let containerName = (chartContainerPrefix + i) + j;
+            for (let j = 0; j < actualCols; j++) {
+                let ai = transposed ? j : i;
+                let aj = transposed ? i : j;
+                let containerName = (chartContainerPrefix + ai) + aj;
                 let td = $('<td>').attr('class', 'resizabletd').append(
                     $('<div>').attr('class', 'resizableDiv').attr('id', containerName)
                 );
@@ -43,6 +69,10 @@ $(document).ready(function() {
             }
             $('#chartsTable').append(row);
         }
+    }
+
+    function createChartContainers(rows, cols) {
+        createHtmlTable(rows, cols, findGetParameter(transposedGetParameter) != 0);
         for (let i = 0; i < rows; i++) {
             for (let j = 0; j < cols; j++) {
                 let containerName = (chartContainerPrefix + i) + j;
