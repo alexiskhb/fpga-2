@@ -14,6 +14,7 @@
 #include "processing.h"
 #include "pinger.h"
 #include "../driver/ioctl_commands.h"
+#include "json/json.hpp"
 
 #include <fastcgi++/request.hpp>
 #include <fastcgi++/manager.hpp>
@@ -40,7 +41,7 @@ public:
                 buf[i] = ~(buf[i] ^ 0x00001000) + 1;
             }
         }
-        std::cout << result << std::endl;
+
         out_data.resize(buf_len);
 
         for (int i = 0; i < buf_len; i += blocks_num) {
@@ -48,7 +49,7 @@ public:
             out_data[1*block_size + i/blocks_num] = buf[i + 1];
             out_data[2*block_size + i/blocks_num] = buf[i + 2];
         }
-        std::cout << std::endl;
+
         return blocks_num;
     }
 
@@ -75,23 +76,35 @@ Driver driver;
 class WebClientRequest: public Fastcgipp::Request<wchar_t>
 {
 public:
+    using json = nlohmann::json;
+
     WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024)
     {}
 private:
     double post_d1 = 0, post_d2 = 0, post_d3 = 0, post_d4 = 0, post_threshold = 0.5;
     int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000;
-    int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, post_is_generator_test = 0;
+    int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, post_is_simulator_test = 0;
 private:
     bool inProcessor()
     {
-        std::string s(environment().postBuffer().begin(), environment().postBuffer().end());
-        std::stringstream post_ss(s);
-        std::cout << "POST:>/" << s << "/<" << std::endl;
-        post_ss >> 
-            post_is_generator_test >>
-            post_d1 >> post_d2 >> post_d3 >> post_d4 >> post_slice_beg >> 
-            post_slice_end >> post_threshold >> post_frequency >> post_pulse_len >> 
-            post_amplitude >> post_sample_rate;
+        json post = json::parse(environment().postBuffer().begin(), environment().postBuffer().end());
+        std::cout << post << std::endl;
+        try {
+            post_is_simulator_test = post.at("isSimulatorTest");
+            post_d1 = post.at("d1");
+            post_d2 = post.at("d2");
+            post_d3 = post.at("d3");
+            post_d4 = post.at("d4");
+            post_slice_beg = post.at("sliceBeg");
+            post_slice_end = post.at("sliceEnd");
+            post_threshold = post.at("threshold");
+            post_frequency = post.at("frequency");
+            post_pulse_len = post.at("pulseLen");
+            post_amplitude = post.at("amplitude");
+            post_sample_rate = post.at("sampleRate");
+        } catch (json::exception e) {
+            std::cerr << e.what() << std::endl;
+        }
         return true;
     }
 
@@ -104,7 +117,7 @@ private:
             std::vector<fourier_type> fourier_result;
             std::vector<hilbert_type> hilbert_result;
             int blocks_num;
-            if (post_is_generator_test) {
+            if (post_is_simulator_test) {
                 blocks_num = 3;
                 data = Pinger{post_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
             } else {

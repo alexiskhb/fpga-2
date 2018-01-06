@@ -31,14 +31,6 @@ $(document).ready(function() {
         updateContents();
     });
 
-    function spacify(ary) {
-        result = "";
-        for (let i = 0; i < ary.length; i++) {
-            result += ary[i] + " ";
-        }
-        return result;
-    }
-
     function createChartContainers(rows, cols) {
         for (let i = 0; i < rows; i++) {
             let row = $('<tr>');
@@ -94,17 +86,29 @@ $(document).ready(function() {
         // let l1 = Math.floor((d1 - dMin)/speedOfSound*invNs);
 
         let slice = document.getElementById('slice').value.split(';');
-        let sliceBeg = slice[0];
-        let sliceEnd = slice[1];
-        let threshold = document.getElementById('threshold').value;
-        let frequency = document.getElementById('frequency').value;
-        let pulseLen = document.getElementById('pulseLen').value;
-        let amplitude = document.getElementById('amplitude').value;
-        let sampleRate = document.getElementById('sampleRate').value; 
+        let sliceBeg = Number(slice[0]);
+        let sliceEnd = Number(slice[1]);
+        let threshold = Number(document.getElementById('threshold').value);
+        let frequency = Number(document.getElementById('frequency').value);
+        let pulseLen = Number(document.getElementById('pulseLen').value);
+        let amplitude = Number(document.getElementById('amplitude').value);
+        let sampleRate = Number(document.getElementById('sampleRate').value);
 
         // Post-query to server is space separated array of parameters for signal simulator
-        let postData = spacify([simulatorPanelEnabled, d1, d2, d3, d4, sliceBeg, sliceEnd, threshold, frequency, pulseLen, amplitude, sampleRate]);
-
+        let postData = JSON.stringify({
+            isSimulatorTest: simulatorPanelEnabled, 
+            d1: d1, 
+            d2: d2, 
+            d3: d3, 
+            d4: d4, 
+            sliceBeg: sliceBeg, 
+            sliceEnd: sliceEnd, 
+            threshold: threshold, 
+            frequency: frequency, 
+            pulseLen: pulseLen, 
+            amplitude: amplitude, 
+            sampleRate: sampleRate
+        });
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
