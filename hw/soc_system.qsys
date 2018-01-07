@@ -501,6 +501,46 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -1591,6 +1631,11 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="fft_dft_0.avalon_next_out"
+   end="adc_fifo.next_out" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="adc_fifo.avalon_ss_fifo_in"
    end="sc_fifo_0.in" />
  <connection
@@ -1613,6 +1658,11 @@
    version="17.1"
    start="fft_dft_0.fft_out"
    end="adc_fifo.fft_out" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="adc_fifo.next_in"
+   end="fft_dft_0.avalon_next_in" />
  <connection
    kind="avalon_streaming"
    version="17.1"

@@ -34,9 +34,13 @@ module adc_fifo (
         output reg                 irq,
 
         output reg         [31:0]  X,
-        output reg                 next_in,
+        output reg                 in_valid,
 
         input wire         [63:0]  Y,
+        input wire                 out_valid,
+
+        output reg                 next_in,
+
         input wire                 next_out
 
     );
@@ -211,16 +215,19 @@ module adc_fifo (
                         // fft_out_ready <= 1'b1;
                         next_in <= 1'b0;
                         if (fft_cntr_in < 128) begin
-                           // if (fft_cntr_in == 0) begin
-                           //    next <= 1'b1;
-                           // end
-                           // X0 <= in[fft_cntr_in * 2];
-                           // X1 <= 16'b0;
-                           // X2 <= in[fft_cntr_in * 2 + 1];
-                           // X3 <= 16'b0;
-                           X <= {in[fft_cntr_in * 2], in[fft_cntr_in * 2 + 1]};
+                            // if (fft_cntr_in == 0) begin
+                            //    next <= 1'b1;
+                            // end
+                            // X0 <= in[fft_cntr_in * 2];
+                            // X1 <= 16'b0;
+                            // X2 <= in[fft_cntr_in * 2 + 1];
+                            // X3 <= 16'b0;
+
+                            in_valid <= 1'b1;
+                            X <= {in[fft_cntr_in * 2], in[fft_cntr_in * 2 + 1]};
                         end else begin
-                           state <= PUSH;
+                            in_valid <= 1'b0;
+                            state <= PUSH;
                         end
 
                     end
@@ -240,7 +247,7 @@ module adc_fifo (
                         // state_after_pause <= FULL;
                         if (next_out == 1'b1) begin
                            flag_fft_out <= 1'b1;
-                        end else if (flag_fft_out == 1) begin
+                        end else if (flag_fft_out == 1 && out_valid == 1) begin
                            if (fft_cntr_out < 128) begin
                               out[fft_cntr_out * 4] <= Y[63:48];
                               out[fft_cntr_out * 4 + 1] <= Y[47:32];
