@@ -5444,11 +5444,12 @@ module fft_dft (
         input wire                 clk,
         input wire                 reset,
 
-        input wire                 in_valid,
+        input wire                 next_in,
         input wire         [31:0]  X,
 
-        output reg                 out_valid,
-        output reg         [63:0]  Y
+        output wire                next_out,
+        output wire        [63:0]  Y
+
 );
 
     wire [15:0] X0;
@@ -5461,6 +5462,16 @@ module fft_dft (
     wire [15:0] Y2;
     wire [15:0] Y3;
 
+    assign X0 = X[31:16];
+    assign X1 = 16'b0;
+    assign X2 = X[15:0];
+    assign X3 = 16'b0;
+
+    assign Y[63:48] = Y0;
+    assign Y[47:32] = Y1;
+    assign Y[31:16] = Y2;
+    assign Y[15:0]  = Y3;
+
     dft_top fft_gen (
         .clk     (clk),
         .reset   (reset),
@@ -5471,87 +5482,5 @@ module fft_dft (
         .X2(X2), .Y2(Y2),
         .X3(X3), .Y3(Y3)
     );
-
-    reg [31:0] fft_cntr_out;
-    reg [7:0]  state;
-    reg        flag_fft_out;
-    reg [7:0]  state_in;
-    reg [7:0]  state_out;
-
-    parameter WAIT   = 8'd0
-            , UNSET_IN = 8'd3
-            , END      = 8'd4
-            , VALID_OUT = 8'd5
-            , GET_IN = 8'd6
-            , FFT_SIZE = 32'd128;
-
-    always @ (posedge clk or posedge reset)
-    begin
-        if (reset) begin
-            next_in <= 0;
-            state_in <= WAIT;
-        end begin
-            case (state_in)
-                WAIT:
-                    if (in_valid == 1'b1) begin
-                        next_in  <= 1;
-                        state_in <= UNSET_IN;
-                    end
-                UNSET_IN:
-                    begin
-                        next_in  <= 0;
-                        state_in <= GET_IN;
-                    end
-                GET_IN:
-                    if (in_valid == 1) begin
-                        X0 <= X[31:16];
-                        X1 <= 16'b0;
-                        X2 <= X[15:0];
-                        X3 <= 16'b0;
-                    end else begin
-                        state_in <= END;
-                    end
-            endcase
-        end
-    end
-
-    always @ (posedge clk or posedge reset)
-    begin
-        if (reset) begin
-            fft_cntr_out <= 0;
-        end else begin
-            if (fft_cntr_out < FFT_SIZE && state_out == VALID_OUT) begin
-                fft_cntr_out <= fft_cntr_out + 1;
-            end else if (fft_cntr_out >= FFT_SIZE) begin
-                fft_cntr_out <= 0;
-            end
-        end
-    end
-
-    always @ (posedge clk or posedge reset)
-    begin
-        if (reset) begin
-            state_out <= WAIT;
-            out_valid <= 1'b0;
-        end begin
-            case (state_out)
-                WAIT:
-                    if (next_out) begin
-                        state_out <= VALID_OUT;
-                    end
-                VALID_OUT:
-                    if (fft_cntr_out < FFT_SIZE) begin
-                        out_valid <= 1'b1;
-                        Y[63:48] = Y0;
-                        Y[47:32] = Y1;
-                        Y[31:16] = Y2;
-                        Y[15:0]  = Y3;
-                        state_out <= END;
-                    end else begin
-                        out_valid <= 1'b0;
-                    end
-            endcase
-        end
-    end
 
 endmodule
