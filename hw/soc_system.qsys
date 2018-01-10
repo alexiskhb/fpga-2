@@ -501,6 +501,22 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element sqrt_0
+   {
+      datum _sortIndex
+      {
+         value = "15";
+         type = "int";
+      }
+   }
    element sysid_qsys
    {
       datum _sortIndex
@@ -1446,6 +1462,9 @@
   <parameter name="USE_PACKETS" value="0" />
   <parameter name="USE_STORE_FORWARD" value="1" />
  </module>
+ <module name="sqrt_0" kind="sqrt" version="1.0" enabled="1">
+  <parameter name="b" value="32" />
+ </module>
  <module
    name="sysid_qsys"
    kind="altera_avalon_sysid_qsys"
@@ -1596,6 +1615,11 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="adc_fifo.avalon_ss_sqrt_in"
+   end="sqrt_0.avalon_streaming_sink" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="adc.avalon_streaming_source"
    end="adc_fifo.avalon_ss_adc" />
  <connection
@@ -1603,6 +1627,11 @@
    version="17.1"
    start="dsp.avalon_streaming_source"
    end="adc_fifo.avalon_ss_dsp" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="sqrt_0.avalon_streaming_source"
+   end="adc_fifo.avalon_ss_sqrt_out" />
  <connection
    kind="avalon_streaming"
    version="17.1"
@@ -1653,6 +1682,7 @@
    version="17.1"
    start="pll_0.outclk2"
    end="intr_capturer_0.clock" />
+ <connection kind="clock" version="17.1" start="pll_0.outclk2" end="sqrt_0.clock" />
  <connection
    kind="clock"
    version="17.1"
@@ -1773,6 +1803,11 @@
    version="17.1"
    start="clk_0.clk_reset"
    end="adc_fifo.reset_sink" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="sqrt_0.reset_sink" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
 </system>
