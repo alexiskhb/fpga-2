@@ -29,7 +29,7 @@ module adc_fifo (
         input wire                 fifo_out_valid,
         output reg                 fifo_out_ready,
 
-        input wire         [12:0]  adc_data,
+        input wire         [15:0]  adc_data,
         input wire                 adc_valid,
         input wire         [2:0]   adc_channel,
 
@@ -130,30 +130,23 @@ module adc_fifo (
     end
 
     reg [2:0] adc_prev_channel;
-    reg [15:0] in1 [255:0];
-    reg [15:0] in2 [255:0];
-    reg [15:0] in3 [255:0];
-
-    // reg [15:0] in [3:0][255:0];
+    reg [15:0] in [3:0][255:0];
+    reg [31:0]  in_cntr [2:0];
+    reg [2:0]   index [2:0];
+    reg [2:0]   current_index;
+    reg [2:0]   fft_good;
 
     reg signed [31:0] fft_real_out [16:0];
     reg signed [31:0] fft_imag_out [16:0];
 
-    // reg [31:0] fft_component;
     reg signed [31:0] fft_real_component;
     reg signed [31:0] fft_imag_component;
     reg [15:0] index_fft;
 
     reg [31:0] fft_cntr;
     reg [31:0] mean_sum;
-    reg [31:0] in1_cntr;
-    reg [31:0] in2_cntr;
-    reg [31:0] in3_cntr;
-
 
     reg [15:0] treshold;
-
-    reg fft1_good;
 
     reg free_fft;
 
@@ -195,21 +188,36 @@ module adc_fifo (
     begin
         if (reset) begin
             state_fft <= WAIT;
-            fft1_good <= 0;
             mean_sum <= 0;
+            fft_good <= 3'd0;
         end else begin
             case (state_fft)
                 WAIT:
-                    if (in1_cntr >= FFT_SIZE) begin
-                        state_fft <= FFT_IN1;
-                        next_in <= 1;
-                        mean_sum <= 0;
+                    begin
+                        if (in_cntr[0] >= FFT_SIZE) begin
+                            current_index <= 0;
+                            mean_sum <= 0;
+                            next_in <= 1;
+                            state_fft <= FFT_IN1;
+                        end 
+                        // if (in_cntr[0] >= FFT_SIZE) begin
+                        //     current_index <= 0;
+                        // end else if (in_cntr[1] >= FFT_SIZE) begin
+                        //     current_index <= 1;
+                        // end else if (in_cntr[2] >= FFT_SIZE) begin
+                        //     current_index <= 2;
+                        // end
+                        // if (in_cntr[0] >= FFT_SIZE || in_cntr[1] >= FFT_SIZE || in_cntr[2] >= FFT_SIZE) begin
+                        //     mean_sum <= 0;
+                        //     next_in <= 1;
+                        //     state_fft <= FFT_IN1;
+                        // end
                     end
                 FFT_IN1:
                     begin
                         next_in <= 0;
                         if (fft_cntr < FFT_HALF_SIZE) begin
-                            X <= {in1[fft_cntr * 2], in1[fft_cntr * 2 + 1]};
+                            X <= {in[current_index][fft_cntr * 2], in[current_index][fft_cntr * 2 + 1]};
                         end else begin
                             state_fft <= FFT_OUT1;
                         end
@@ -220,44 +228,13 @@ module adc_fifo (
                     end
                 GET_OUT1:                    
                     if (fft_cntr >= 5 && fft_cntr <= 12) begin
-                        if (Y[63:48] < 0) begin
-                            fft_real_out[(fft_cntr - 5) * 2] <= { 16'hffff, Y[63:48] };
-                        end else begin
-                            fft_real_out[(fft_cntr - 5) * 2] <= { 16'b0, Y[63:48]};
-                        end
-                        if (Y[47:32] <0) begin
-                            fft_imag_out[(fft_cntr - 5) * 2] <= { 16'hffff, Y[47:32] };
-                        end else begin
-                            fft_imag_out[(fft_cntr - 5) * 2] <= { 16'b0, Y[47:32] };
-                        end
-                        if (Y[31:16] <0) begin
-                            fft_real_out[(fft_cntr - 5) * 2 + 1] <= { 16'hffff, Y[31:16] };
-                        end else begin
-                            fft_real_out[(fft_cntr - 5) * 2 + 1] <= { 16'b0, Y[31:16] };
-                        end
-                        if (Y[15:0] <0) begin
-                            fft_imag_out[(fft_cntr - 5) * 2 + 1] <= { 16'hffff, Y[15:0] };
-                        end else begin
-                            fft_imag_out[(fft_cntr - 5) * 2 + 1] <= { 16'b0, Y[15:0] };
-                        end
-                        // fft_real_out[(fft_cntr - 5) * 2] <= Y[63:48];
-                        // fft_imag_out[(fft_cntr - 5) * 2] <= Y[47:32];
-                        // fft_real_out[(fft_cntr - 5) * 2 + 1] <= Y[31:16];
-                        // fft_imag_out[(fft_cntr - 5) * 2 + 1] <= Y[15:0];
+                        fft_real_out[(fft_cntr - 5) * 2] <= $signed({ Y[63:48], 16'd0 }) >>> 16;
+                        fft_imag_out[(fft_cntr - 5) * 2] <= $signed({ Y[47:32], 16'd0 }) >>> 16;
+                        fft_real_out[(fft_cntr - 5) * 2 + 1] <= $signed({ Y[31:16], 16'd0 }) >>> 16;
+                        fft_imag_out[(fft_cntr - 5) * 2 + 1] <= $signed({ Y[15:0], 16'd0 }) >>> 16;
                     end else if (fft_cntr == index_fft) begin
-                        // fft_component <= { Y[63:48],  Y[47:32] };
-                        if (Y[63:48] < 0) begin
-                            fft_real_component <= { 16'hffff, Y[63:48] };
-                        end else begin
-                            fft_real_component <= { 16'b0, Y[63:48]};
-                        end
-                        if (Y[47:32] < 0) begin
-                            fft_imag_component <= { 16'hffff, Y[47:32] };
-                        end else begin
-                            fft_imag_component <= { 16'b0, Y[47:32]};
-                        end
-                        // fft_real_component <= Y[63:48];
-                        // fft_imag_component <= Y[47:32];
+                        fft_real_component <= $signed({ Y[63:48], 16'd0 }) >>> 16;
+                        fft_imag_component <= $signed({ Y[47:32], 16'd0 }) >>> 16;
                     end else if (fft_cntr > index_fft) begin 
                         state_fft <= CALC_MEAN;
                     end                    
@@ -305,13 +282,13 @@ module adc_fifo (
                             mean_shifted_tmp <= mean_sum >> 4;
                             X <= mean_shifted_tmp;
                             sqrt_value <= sqrt_component_tmp;
-                            if (sqrt_result >= treshold * (mean_sum >> 4)) begin
-                                fft1_good <= 1;
+                            if ((mean_sum >> 4) != 32'd0 && sqrt_result > treshold * (mean_sum >> 4)) begin
+                                fft_good[current_index] <= 1'b1;
                             end else begin
-                                fft1_good <= 0;
+                                fft_good[current_index] <= 1'b0;
                             end
-                            // state_fft <= WAIT;
-                            state_fft <= FFT_END;
+                            state_fft <= WAIT;
+                            // state_fft <= FFT_END;
                         end
                     end
             endcase            
@@ -331,28 +308,21 @@ module adc_fifo (
             dma_waitrequest                 <= 1'b0;
             pause_cntr                      <= 4'd0;
             adc_prev_channel                <= 3'd0;
-            treshold                        <= 50;
+            treshold                        <= 10;
             index_fft                       <= 24;
+            index[0]                        <= 2;
+            index[1]                        <= 0;
+            index[2]                        <= 1;
         end else begin
             adc_prev_channel <= adc_channel;    
             if (state_fft == FFT_OUT1) begin
-                in1_cntr <= 0;
+                in_cntr[current_index] <= 0;
             end
             case (state)
                 FILL:
                     if (cntr_in < SIZE_FIFO && adc_valid == 1'b0) begin
                         fifo_in_valid <= 1'b0;
                     end else if (cntr_in < SIZE_FIFO && adc_valid == 1'b1) begin
-                        // if (adc_channel == 1 && in3_cntr < FFT_SIZE) begin
-                        //     in3[in3_cntr] <= adc_data;
-                        //     in3_cntr <= in3_cntr + 1;
-                        // end else if (adc_channel == 2 && in1_cntr < FFT_SIZE) begin
-                        //     in1[in1_cntr] <= adc_data;
-                        //     in1_cntr <= in1_cntr + 1;
-                        // end else if (adc_channel == 3 && in2_cntr < FFT_SIZE) begin
-                        //     in2[in2_cntr] <= adc_data;
-                        //     in2_cntr <= in2_cntr + 1;
-                        // end
                         fifo_in_valid <= 1'b1;
                         fifo_in_data <= adc_data;
                         state <= PAUSE;
@@ -364,7 +334,7 @@ module adc_fifo (
                 FULL:
                     begin
                         fifo_in_valid <= 1'b0;
-                        if (state_fft != WAIT && adc_channel == 1 && adc_prev_channel == 1) begin
+                        if (fft_good[0] == 1'b1 && adc_channel == 1 && adc_prev_channel == 1) begin
                             state <= SETUP_DMA;
                             irq <= 1'b1;
                         end else if (adc_valid == 1'b1) begin
@@ -379,16 +349,8 @@ module adc_fifo (
                 PUSH:
                     begin
                         if (align_event == 1) begin
-                            if (adc_channel == 1 && in3_cntr < FFT_SIZE) begin
-                                in3[in3_cntr] <= adc_data;
-                                in3_cntr <= in3_cntr + 1;
-                            end else if (adc_channel == 2 && in1_cntr < FFT_SIZE) begin
-                                in1[in1_cntr] <= adc_data;
-                                in1_cntr <= in1_cntr + 1;
-                            end else if (adc_channel == 3 && in2_cntr < FFT_SIZE) begin
-                                in2[in2_cntr] <= adc_data;
-                                in2_cntr <= in2_cntr + 1;
-                            end
+                            in[index[adc_channel - 1]][in_cntr[index[adc_channel - 1]]] <= adc_data;
+                            in_cntr[index[adc_channel - 1]] <= in_cntr[index[adc_channel - 1]] + 1;
                         end
                         fifo_out_ready <= 1'b0;
                         fifo_in_valid <= 1'b1;
