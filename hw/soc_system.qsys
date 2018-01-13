@@ -41,6 +41,14 @@
          type = "int";
       }
    }
+   element data_controller_0
+   {
+      datum _sortIndex
+      {
+         value = "16";
+         type = "int";
+      }
+   }
    element dma_0
    {
       datum _sortIndex
@@ -70,6 +78,14 @@
       datum _sortIndex
       {
          value = "14";
+         type = "int";
+      }
+   }
+   element fft_fifo_0
+   {
+      datum _sortIndex
+      {
+         value = "17";
          type = "int";
       }
    }
@@ -517,6 +533,62 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sqrt_0
    {
       datum _sortIndex
@@ -607,6 +679,11 @@
   <parameter name="inputClockFrequency" value="0" />
   <parameter name="resetSynchronousEdges" value="NONE" />
  </module>
+ <module
+   name="data_controller_0"
+   kind="data_controller"
+   version="1.0"
+   enabled="1" />
  <module name="dma_0" kind="altera_avalon_dma" version="17.1" enabled="1">
   <parameter name="allowByteTransactions" value="false" />
   <parameter name="allowDoubleWordTransactions" value="false" />
@@ -630,6 +707,26 @@
  </module>
  <module name="dsp" kind="dsp" version="1.0" enabled="1" />
  <module name="fft_dft_0" kind="fft_dft" version="1.0" enabled="1" />
+ <module
+   name="fft_fifo_0"
+   kind="altera_avalon_sc_fifo"
+   version="17.1"
+   enabled="1">
+  <parameter name="BITS_PER_SYMBOL" value="32" />
+  <parameter name="CHANNEL_WIDTH" value="8" />
+  <parameter name="EMPTY_LATENCY" value="3" />
+  <parameter name="ENABLE_EXPLICIT_MAXCHANNEL" value="false" />
+  <parameter name="ERROR_WIDTH" value="8" />
+  <parameter name="EXPLICIT_MAXCHANNEL" value="0" />
+  <parameter name="FIFO_DEPTH" value="256" />
+  <parameter name="SYMBOLS_PER_BEAT" value="1" />
+  <parameter name="USE_ALMOST_EMPTY_IF" value="0" />
+  <parameter name="USE_ALMOST_FULL_IF" value="0" />
+  <parameter name="USE_FILL_LEVEL" value="1" />
+  <parameter name="USE_MEMORY_BLOCKS" value="1" />
+  <parameter name="USE_PACKETS" value="0" />
+  <parameter name="USE_STORE_FORWARD" value="1" />
+ </module>
  <module
    name="fpga_only_master"
    kind="altera_jtag_avalon_master"
@@ -1501,6 +1598,15 @@
  <connection
    kind="avalon"
    version="17.1"
+   start="data_controller_0.avalon_mm_csr0"
+   end="fft_fifo_0.csr">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="17.1"
    start="hps_0.h2f_axi_master"
    end="onchip_memory2_0.s1">
   <parameter name="arbitrationPriority" value="1" />
@@ -1618,6 +1724,11 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="adc_fifo.avalon_ss_data_controller_in"
+   end="data_controller_0.avalon_ss_adc_in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="adc_fifo.avalon_ss_fifo_in"
    end="sc_fifo_0.in" />
  <connection
@@ -1653,6 +1764,16 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="data_controller_0.fifo0_in"
+   end="fft_fifo_0.in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="fft_fifo_0.out"
+   end="adc_fifo.avalon_ss_fft_fifo0_out" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="sc_fifo_0.out"
    end="adc_fifo.avalon_ss_fifo_out" />
  <connection kind="clock" version="17.1" start="clk_0.clk" end="pll_0.refclk" />
@@ -1684,6 +1805,11 @@
    kind="clock"
    version="17.1"
    start="pll_0.outclk2"
+   end="fft_fifo_0.clk" />
+ <connection
+   kind="clock"
+   version="17.1"
+   start="pll_0.outclk2"
    end="onchip_memory2_0.clk1" />
  <connection
    kind="clock"
@@ -1706,6 +1832,11 @@
    version="17.1"
    start="pll_0.outclk2"
    end="adc_fifo.clock_sink" />
+ <connection
+   kind="clock"
+   version="17.1"
+   start="pll_0.outclk2"
+   end="data_controller_0.clock_sink" />
  <connection
    kind="clock"
    version="17.1"
@@ -1773,6 +1904,11 @@
    kind="reset"
    version="17.1"
    start="clk_0.clk_reset"
+   end="fft_fifo_0.clk_reset" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
    end="sysid_qsys.reset" />
  <connection
    kind="reset"
@@ -1816,6 +1952,11 @@
    version="17.1"
    start="clk_0.clk_reset"
    end="sqrt_0.reset_sink" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="data_controller_0.reset_sink" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
 </system>

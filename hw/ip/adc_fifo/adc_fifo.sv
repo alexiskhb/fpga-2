@@ -45,7 +45,17 @@ module adc_fifo (
         input wire         [15:0]  sqrt_result,
 
         output reg                 sqrt_start,
-        output reg         [31:0]  sqrt_value
+        output reg         [31:0]  sqrt_value,
+
+        output reg         [15:0]  data_cntrl_data,
+        output reg                 data_cntrl_valid,
+        output reg         [2:0]   data_cntrl_channel,
+
+        input wire         [31:0]  fifo0_out_data,
+        input wire         [7:0]   fifo0_out_channel,
+        input wire         [7:0]   fifo0_out_error,
+        input wire                 fifo0_out_valid,
+        output reg                 fifo0_out_ready
     );
 
     reg [31:0] flag_in;
@@ -194,10 +204,11 @@ module adc_fifo (
             case (state_fft)
                 WAIT:
                     begin
-                        if (in_cntr[0] >= FFT_SIZE) begin
+                        if (in_cntr[0] >= FFT_SIZE && fifo0_out_valid == 1) begin
                             current_index <= 0;
                             mean_sum <= 0;
                             next_in <= 1;
+                            fifo0_out_ready <= 1'b1;
                             state_fft <= FFT_IN1;
                         end 
                         // if (in_cntr[0] >= FFT_SIZE) begin
@@ -217,8 +228,9 @@ module adc_fifo (
                     begin
                         next_in <= 0;
                         if (fft_cntr < FFT_HALF_SIZE) begin
-                            X <= {in[current_index][fft_cntr * 2], in[current_index][fft_cntr * 2 + 1]};
+                            X <= fifo_out_data;
                         end else begin
+                            fifo0_out_ready <= 1'b0;
                             state_fft <= FFT_OUT1;
                         end
                     end
@@ -349,8 +361,11 @@ module adc_fifo (
                 PUSH:
                     begin
                         if (align_event == 1) begin
-                            in[index[adc_channel - 1]][in_cntr[index[adc_channel - 1]]] <= adc_data;
+                            // in[index[adc_channel - 1]][in_cntr[index[adc_channel - 1]]] <= adc_data;
                             in_cntr[index[adc_channel - 1]] <= in_cntr[index[adc_channel - 1]] + 1;
+                            data_cntrl_channel <= index[adc_channel - 1];
+                            data_cntrl_valid <= 1'b1;
+                            data_cntrl_data <= adc_data;
                         end
                         fifo_out_ready <= 1'b0;
                         fifo_in_valid <= 1'b1;
@@ -377,6 +392,7 @@ module adc_fifo (
                     end
                 PAUSE:
                     begin
+                        data_cntrl_valid <= 1'b0;
                         fifo_in_valid <= 1'b0;
                         if (pause_cntr >= 4'd7) begin
                             pause_cntr <= 4'd0;
