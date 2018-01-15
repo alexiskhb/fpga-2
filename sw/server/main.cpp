@@ -9,6 +9,7 @@
 #include <limits>
 #include <ctime>
 #include <functional>
+#include <fstream>
 #include <random>
 
 #include "processing.h"
@@ -35,7 +36,7 @@ public:
         int block_size = 1024;
         int buf_len = block_size*blocks_num;
         data_type buf[buf_len];
-        int result = read(ham_driver, buf, buf_len * sizeof(data_type));
+        read(ham_driver, buf, buf_len * sizeof(data_type));
         for (int i = 0; i < buf_len; ++i) {
             if ((buf[i] & 0x00001000) == 0x00001000) {
                 buf[i] = ~(buf[i] ^ 0x00001000) + 1;
@@ -72,6 +73,7 @@ private:
 };
 
 Driver driver;
+Pinger pinger;
 
 class WebClientRequest: public Fastcgipp::Request<wchar_t>
 {
@@ -113,12 +115,12 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
-
             vec2d<data_type> data;
             vec2d<fourier_type> fourier_result;
             vec2d<hilbert_type> hilbert_result;
             if (post_is_simulator_test) {
-                data = Pinger{post_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
+                // pinger.set(post_frequency, post_pulse_len, post_amplitude, post_sample_rate);
+                data = pinger.generate({post_d1, post_d2, post_d3});
             } else {
                 data = vec2d<data_type>(3, vec1d<data_type>(256));
             }
@@ -228,6 +230,9 @@ private:
 
 int main(int argc, char** argv)
 {
+    std::ifstream json_data_file("data.json");
+    // std::cout << std::setw(4) << j << std::endl;
+    pinger.load(json_data_file);
     driver.init(DEVICE_NAME);
     Fastcgipp::Manager<WebClientRequest> manager;
     manager.setupSignals();

@@ -3,20 +3,69 @@
 #include <vector>
 #include <iostream>
 #include "processing.h"
+#include "json/json.hpp"
 
 class Pinger {
 public:
-    Pinger(int freq/*Hz*/, int pulse_len/*ms*/, int amplitude, int sample_rate) : 
-        freq(freq), pulse_len(pulse_len), ampl(amplitude), sample_rate(sample_rate)
+    using json = nlohmann::json;
+
+    Pinger() {}
+
+    Pinger(std::istream& file) : is_from_file(true) 
     {
-        this->block_size = upperpow2(pulse_len*measures_per_ms);
+        load(file);
+    }
+
+    Pinger& load(std::istream& file)
+    {
+        using response_data_type = std::vector<std::vector<std::pair<data_type, data_type>>>;
+        json j;
+        file >> j;
+        response_data_type rsps_data = j.at("data").get<response_data_type>();
+        for (auto& v: rsps_data) {
+            data2d.push_back(vec1d<data_type>(v.size()));
+            for (unsigned i = 0; i < v.size(); i++) {
+                data2d.back()[i] = v[i].second;
+            }
+        }
+        from_file(true);
+        return *this;
+    }
+
+    Pinger(int a_freq/*Hz*/, int a_pulse_len/*ms*/, int a_amplitude, int a_sample_rate)
+    {
+        this->set(a_freq, a_pulse_len, a_amplitude, a_sample_rate);
         std::cout << 
             "freq: " << freq <<
             "\nblock size: " << block_size << std::endl;
     }
 
+    Pinger& set(int a_freq/*Hz*/, int a_pulse_len/*ms*/, int a_amplitude, int a_sample_rate)
+    {
+        this->block_size = upperpow2(pulse_len*measures_per_ms);
+        this->freq = a_freq;
+        this->pulse_len = a_pulse_len;
+        this->ampl = a_amplitude;
+        this->sample_rate = a_sample_rate;
+        from_file(false);
+        return *this;
+    }
+
+    void from_file(bool b) 
+    {
+        this->is_from_file = b;
+    }
+
+    vec2d<data_type> generate() 
+    {
+        return data2d;
+    }
+
     vec2d<data_type> generate(const vec1d<double>& distances/*meters*/) 
     {
+        if (is_from_file) {
+            return generate();
+        }
         auto min_dist = distances.front();
         for (auto d: distances) {
             if (d < min_dist) {
@@ -46,7 +95,7 @@ private:
     {
         data.resize(block_size);
         for (int t = 0; t < block_size; t++) {
-            data[t] = ampl*sin((2*M_PI*t*freq)/sample_rate) + ampl + 1;
+            data[t] = ampl*sin((2*M_PI*t*freq)/sample_rate);
         }
     }
 
@@ -60,6 +109,8 @@ private:
     const int measures_per_ms = 1000;
     int freq, pulse_len, ampl, block_size, sample_rate;
     vec1d<data_type> data;
+    vec2d<data_type> data2d;
+    bool is_from_file;
 };
 
 class Context {
