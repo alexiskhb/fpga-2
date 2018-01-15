@@ -89,6 +89,22 @@
          type = "int";
       }
    }
+   element fft_fifo_1
+   {
+      datum _sortIndex
+      {
+         value = "18";
+         type = "int";
+      }
+   }
+   element fft_fifo_2
+   {
+      datum _sortIndex
+      {
+         value = "19";
+         type = "int";
+      }
+   }
    element fpga_only_master
    {
       datum _sortIndex
@@ -589,6 +605,14 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sqrt_0
    {
       datum _sortIndex
@@ -709,6 +733,46 @@
  <module name="fft_dft_0" kind="fft_dft" version="1.0" enabled="1" />
  <module
    name="fft_fifo_0"
+   kind="altera_avalon_sc_fifo"
+   version="17.1"
+   enabled="1">
+  <parameter name="BITS_PER_SYMBOL" value="32" />
+  <parameter name="CHANNEL_WIDTH" value="8" />
+  <parameter name="EMPTY_LATENCY" value="3" />
+  <parameter name="ENABLE_EXPLICIT_MAXCHANNEL" value="false" />
+  <parameter name="ERROR_WIDTH" value="8" />
+  <parameter name="EXPLICIT_MAXCHANNEL" value="0" />
+  <parameter name="FIFO_DEPTH" value="256" />
+  <parameter name="SYMBOLS_PER_BEAT" value="1" />
+  <parameter name="USE_ALMOST_EMPTY_IF" value="0" />
+  <parameter name="USE_ALMOST_FULL_IF" value="0" />
+  <parameter name="USE_FILL_LEVEL" value="1" />
+  <parameter name="USE_MEMORY_BLOCKS" value="1" />
+  <parameter name="USE_PACKETS" value="0" />
+  <parameter name="USE_STORE_FORWARD" value="1" />
+ </module>
+ <module
+   name="fft_fifo_1"
+   kind="altera_avalon_sc_fifo"
+   version="17.1"
+   enabled="1">
+  <parameter name="BITS_PER_SYMBOL" value="32" />
+  <parameter name="CHANNEL_WIDTH" value="8" />
+  <parameter name="EMPTY_LATENCY" value="3" />
+  <parameter name="ENABLE_EXPLICIT_MAXCHANNEL" value="false" />
+  <parameter name="ERROR_WIDTH" value="8" />
+  <parameter name="EXPLICIT_MAXCHANNEL" value="0" />
+  <parameter name="FIFO_DEPTH" value="256" />
+  <parameter name="SYMBOLS_PER_BEAT" value="1" />
+  <parameter name="USE_ALMOST_EMPTY_IF" value="0" />
+  <parameter name="USE_ALMOST_FULL_IF" value="0" />
+  <parameter name="USE_FILL_LEVEL" value="1" />
+  <parameter name="USE_MEMORY_BLOCKS" value="1" />
+  <parameter name="USE_PACKETS" value="0" />
+  <parameter name="USE_STORE_FORWARD" value="1" />
+ </module>
+ <module
+   name="fft_fifo_2"
    kind="altera_avalon_sc_fifo"
    version="17.1"
    enabled="1">
@@ -1607,6 +1671,24 @@
  <connection
    kind="avalon"
    version="17.1"
+   start="data_controller_0.avalon_mm_csr1"
+   end="fft_fifo_1.csr">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="17.1"
+   start="data_controller_0.avalon_mm_csr2"
+   end="fft_fifo_2.csr">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="17.1"
    start="hps_0.h2f_axi_master"
    end="onchip_memory2_0.s1">
   <parameter name="arbitrationPriority" value="1" />
@@ -1769,8 +1851,28 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="data_controller_0.fifo1_in"
+   end="fft_fifo_1.in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="data_controller_0.fifo2_in"
+   end="fft_fifo_2.in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="fft_fifo_0.out"
    end="adc_fifo.avalon_ss_fft_fifo0_out" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="fft_fifo_1.out"
+   end="adc_fifo.avalon_ss_fft_fifo1_out" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="fft_fifo_2.out"
+   end="adc_fifo.avalon_ss_fft_fifo2_out" />
  <connection
    kind="avalon_streaming"
    version="17.1"
@@ -1806,6 +1908,16 @@
    version="17.1"
    start="pll_0.outclk2"
    end="fft_fifo_0.clk" />
+ <connection
+   kind="clock"
+   version="17.1"
+   start="pll_0.outclk2"
+   end="fft_fifo_1.clk" />
+ <connection
+   kind="clock"
+   version="17.1"
+   start="pll_0.outclk2"
+   end="fft_fifo_2.clk" />
  <connection
    kind="clock"
    version="17.1"
@@ -1905,6 +2017,16 @@
    version="17.1"
    start="clk_0.clk_reset"
    end="fft_fifo_0.clk_reset" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="fft_fifo_1.clk_reset" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="fft_fifo_2.clk_reset" />
  <connection
    kind="reset"
    version="17.1"
