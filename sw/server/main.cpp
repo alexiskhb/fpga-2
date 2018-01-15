@@ -85,26 +85,44 @@ private:
     int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000;
     int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, post_is_simulator_test = 0;
 private:
+    template <class T>
+    using var_json_mapper = std::vector<std::pair<std::reference_wrapper<T>, std::string>>;
+
+    template <class T>
+    void read_json(const json& post, var_json_mapper<T>& map) 
+    {
+        for (auto& p: map) {
+            try {
+                p.first.get() = post.at(p.second);
+            } catch (const json::exception& e) {
+                std::cerr << e.what() << std::endl;
+            }
+        }
+    }
+
     bool inProcessor()
     {
+        var_json_mapper<int> int_post_data = {
+            {post_slice_beg, "sliceBeg"},
+            {post_is_simulator_test, "isSimulatorTest"},
+            {post_slice_beg, "sliceBeg"},
+            {post_slice_end, "sliceEnd"},
+            {post_frequency, "frequency"},
+            {post_pulse_len, "pulseLen"},
+            {post_amplitude, "amplitude"},
+            {post_sample_rate, "sampleRate"},
+        };
+        var_json_mapper<double> double_post_data = {
+            {post_d1, "d1"},
+            {post_d2, "d2"},
+            {post_d3, "d3"},
+            {post_d4, "d4"},
+            {post_threshold, "threshold"},
+        };
         json post = json::parse(environment().postBuffer().begin(), environment().postBuffer().end());
         std::cout << post << std::endl;
-        try {
-            post_is_simulator_test = post.at("isSimulatorTest");
-            post_d1 = post.at("d1");
-            post_d2 = post.at("d2");
-            post_d3 = post.at("d3");
-            post_d4 = post.at("d4");
-            post_slice_beg = post.at("sliceBeg");
-            post_slice_end = post.at("sliceEnd");
-            post_threshold = post.at("threshold");
-            post_frequency = post.at("frequency");
-            post_pulse_len = post.at("pulseLen");
-            post_amplitude = post.at("amplitude");
-            post_sample_rate = post.at("sampleRate");
-        } catch (json::exception e) {
-            std::cerr << e.what() << std::endl;
-        }
+        read_json(post, int_post_data);
+        read_json(post, double_post_data);
         return true;
     }
 
