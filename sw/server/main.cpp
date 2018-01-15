@@ -24,9 +24,9 @@
 class Driver 
 {
 public:
-    void send(int cmd, int* data)
+    void send(int cmd, unsigned long arg)
     {
-        // ioctl(fd, cmd, reinterpret_cast<char*>(data));
+        ioctl(ham_driver, cmd, arg);
     }
 
     int recv(int cmd, std::vector<data_type>& out_data) 
@@ -81,15 +81,18 @@ public:
     WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024)
     {}
 private:
-    double post_d1 = 0, post_d2 = 0, post_d3 = 0, post_d4 = 0, post_threshold = 0.5;
-    int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000;
-    int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, post_is_simulator_test = 0;
+    enum Mode {
+        fpga_sim_mode = 0, serv_sim_mode = 1, real_mode = 2
+    };
+    double post_d1 = 0, post_d2 = 0, post_d3 = 0, post_d4 = 0;
+    int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000, post_threshold = 5;
+    int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, mode;
 private:
     template <class T>
-    using var_json_mapper = std::vector<std::pair<std::reference_wrapper<T>, std::string>>;
+    using json_to_variable = std::vector<std::pair<std::reference_wrapper<T>, std::string>>;
 
     template <class T>
-    void read_json(const json& post, var_json_mapper<T>& map) 
+    void read_json(const json& post, json_to_variable<T> map) 
     {
         for (auto& p: map) {
             try {
@@ -102,27 +105,33 @@ private:
 
     bool inProcessor()
     {
-        var_json_mapper<int> int_post_data = {
-            {post_slice_beg, "sliceBeg"},
-            {post_is_simulator_test, "isSimulatorTest"},
+        const json post = json::parse(environment().postBuffer().begin(), environment().postBuffer().end());
+        std::cout << post << std::endl;
+        read_json<int>(post, {
+            {mode, "mode"},
+        });
+        if (mode == real_mode) {
+            return true;
+        }
+        read_json<int>(post, {
             {post_slice_beg, "sliceBeg"},
             {post_slice_end, "sliceEnd"},
             {post_frequency, "frequency"},
             {post_pulse_len, "pulseLen"},
             {post_amplitude, "amplitude"},
             {post_sample_rate, "sampleRate"},
-        };
-        var_json_mapper<double> double_post_data = {
+            {post_threshold, "threshold"},
+        });
+        if (mode == fpga_sim_mode) {
+            driver.send(IOCTL_SET_TRESHOLD, post_threshold);
+            return true;
+        }
+        read_json<double>(post, {
             {post_d1, "d1"},
             {post_d2, "d2"},
             {post_d3, "d3"},
             {post_d4, "d4"},
-            {post_threshold, "threshold"},
-        };
-        json post = json::parse(environment().postBuffer().begin(), environment().postBuffer().end());
-        std::cout << post << std::endl;
-        read_json(post, int_post_data);
-        read_json(post, double_post_data);
+        });
         return true;
     }
 
@@ -135,11 +144,15 @@ private:
             std::vector<fourier_type> fourier_result;
             std::vector<hilbert_type> hilbert_result;
             int blocks_num;
-            if (post_is_simulator_test) {
+            if (mode == real_mode) {
+                blocks_num = driver.recv(0, data);
+            }
+            if (mode == fpga_sim_mode) {
+                blocks_num = driver.recv(0, data);
+            }
+            if (mode == serv_sim_mode) {
                 blocks_num = 3;
                 data = Pinger{post_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
-            } else {
-                blocks_num = driver.recv(0, data);
             }
             const int block_size = data.size()/blocks_num;
 

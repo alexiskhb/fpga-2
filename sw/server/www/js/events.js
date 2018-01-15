@@ -1,41 +1,75 @@
-// nginx redirects /sv -> host:8000 (see README/nginx.conf)
-const fastcgiAddress = "/sv";
-// 1/nanosecond
-const invNs = 1e8;
-const speedOfSound = 1500;
-
-// __________________________
-// | chart00 | chart01 | ...
-// | chart10 | chart11 | ...
-// | chart20 | chart21 | ...
-// |   ...   |   ...   | ...
-const chartContainerPrefix = 'chart';
-
-// use host?<transposedGetParameter>=1
-// to see transposed table:
-// ___________________________________
-// | chart00 | chart10 | chart20 | ...
-// | chart01 | chart11 | chart21 | ...
-// |   ...   |   ...   |   ...   | ...
-const transposedGetParameter = 'transposed';
-
-// Array of canvasjs library objects
-let plots = {};
-
-let isFirstLoad = true;
-
-// Needed to stop polling by interval
-let intervalHandler = 0;
-
-// Needed to restore size of charts
-let defaultChartWidth = 0;
-let defaultChartHeight = 0;
-let simulatorPanelEnabled = 0;
-
-let chartRows = 0;
-let chartCols = 0;
-
 $(document).ready(function() {
+    // nginx redirects /sv -> host:8000 (see README/nginx.conf)
+    const fastcgiAddress = "/sv";
+    // 1/nanosecond
+    const invNs = 1e8;
+    const speedOfSound = 1500;
+
+    // __________________________
+    // | chart00 | chart01 | ...
+    // | chart10 | chart11 | ...
+    // | chart20 | chart21 | ...
+    // |   ...   |   ...   | ...
+    const chartContainerPrefix = 'chart';
+
+    // use host?<transposedGetParameter>=1
+    // to see transposed table:
+    // ___________________________________
+    // | chart00 | chart10 | chart20 | ...
+    // | chart01 | chart11 | chart21 | ...
+    // |   ...   |   ...   |   ...   | ...
+    const transposedGetParameter = 'transposed';
+
+    // Array of canvasjs library objects
+    let plots = {};
+
+    let isFirstLoad = true;
+
+    // Needed to stop polling by interval
+    let intervalHandler = 0;
+
+    // Needed to restore size of charts
+    let defaultChartWidth = 0;
+    let defaultChartHeight = 0;
+
+    let chartRows = 0;
+    let chartCols = 0;
+
+    let modes = {};
+
+    function registerMode(properties) {
+        let value = $("select[id=modeSelector] option").length;
+        let option = $('<option>').attr('value', value).html(properties.name);
+        $('#modeSelector').append(option);
+    }
+
+    function applyMode(modeValue) {
+
+    }
+
+    $('#modeSelector').on('change', function(event) {
+        applyMode($("select#modeSelector").val());
+    });
+
+    // Executes when the page loads
+    $(window).on("load", function(e) {
+        updateInterval();
+        $(document.getElementById("simulatorControls")).hide();
+        registerMode({
+            name: "fpga_sim",
+            mainPanel: true
+        });
+        registerMode({
+            name: "serv_sim",
+            mainPanel: true
+
+        });
+        registerMode({
+            name: "real_mode",
+            mainPanel: true
+        });
+    });
+
     $("#pingButton").click(function() {
         updateContents();
     });
@@ -123,10 +157,11 @@ $(document).ready(function() {
         let pulseLen = Number(document.getElementById('pulseLen').value);
         let amplitude = Number(document.getElementById('amplitude').value);
         let sampleRate = Number(document.getElementById('sampleRate').value);
+        let mode = Number($("select#modeSelector").val());
 
         // Post-query to server is space separated array of parameters for signal simulator
         let postData = JSON.stringify({
-            isSimulatorTest: simulatorPanelEnabled, 
+            mode: mode,
             d1: d1, 
             d2: d2, 
             d3: d3, 
@@ -137,7 +172,8 @@ $(document).ready(function() {
             frequency: frequency, 
             pulseLen: pulseLen, 
             amplitude: amplitude, 
-            sampleRate: sampleRate
+            sampleRate: sampleRate,
+            kek: 123
         });
         $.ajax({
             url: fastcgiAddress,
@@ -181,12 +217,6 @@ $(document).ready(function() {
         }
     }
 
-    // Executes when the page loads
-    $(window).on("load", function(e) {
-        updateInterval();
-        $(document.getElementById("simulatorControls")).hide();
-    });
-
     function resizeCharts() {
         let props = Object.getOwnPropertyNames(plots);
         for (let i = 0; i < props.length; i++) {
@@ -209,7 +239,6 @@ $(document).ready(function() {
     // Hide and show controls panel
     function toggleSimulatorControls() {
         $(document.getElementById("simulatorControls")).toggle();
-        simulatorPanelEnabled = $("#simulatorControls").is(":visible") ? 1 : 0;
     }
 
     $("#toggleSimulatorControls").click(function() {
