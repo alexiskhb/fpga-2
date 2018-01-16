@@ -21,6 +21,7 @@
 
 #define DEVICE_NAME "/dev/ham"
 
+
 class Driver 
 {
 public:
@@ -82,11 +83,12 @@ public:
     {}
 private:
     enum Mode {
-        fpga_sim_mode = 0, serv_sim_mode = 1, real_mode = 2
+        fpga_sim_mode = 0, serv_sim_mode = 1, real_mode = 2, apply_settings = 3
     };
     double post_d1 = 0, post_d2 = 0, post_d3 = 0, post_d4 = 0;
     int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000, post_threshold = 5;
     int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, mode;
+    std::vector<int> v;
 private:
     template <class T>
     using json_to_variable = std::vector<std::pair<std::reference_wrapper<T>, std::string>>;
@@ -96,7 +98,8 @@ private:
     {
         for (auto& p: map) {
             try {
-                p.first.get() = post.at(p.second);
+                T t = post.at(p.second);
+                p.first.get() = t;
             } catch (const json::exception& e) {
                 std::cerr << e.what() << std::endl;
             }
@@ -122,6 +125,11 @@ private:
             {post_sample_rate, "sampleRate"},
             {post_threshold, "threshold"},
         });
+        read_json<std::vector<int>>(post, {
+            {v, "slice"}
+        });
+        post_slice_beg = v.front();
+        post_slice_end = v.back();
         if (mode == fpga_sim_mode) {
             driver.send(IOCTL_SET_TRESHOLD, post_threshold);
             return true;
@@ -140,6 +148,9 @@ private:
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (driver.is_ready()) {
+            if (mode == apply_settings) {
+                return true;
+            }
             std::vector<data_type> data;
             std::vector<fourier_type> fourier_result;
             std::vector<hilbert_type> hilbert_result;

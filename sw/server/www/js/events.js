@@ -38,37 +38,39 @@ $(document).ready(function() {
     let modes = {};
 
     function registerMode(properties) {
+        let name = properties.name;
         let value = $("select[id=modeSelector] option").length;
-        let option = $('<option>').attr('value', value).html(properties.name);
+        let option = $('<option>').attr('value', value).html(name);
         $('#modeSelector').append(option);
+        modes[value] = properties;
     }
 
     function applyMode(modeValue) {
-
+        $('#simulatorControls').empty();
+        properties = modes[modeValue];
+        let name = properties.name;
+        properties = properties.props;
+        for (var i = 0; i < properties.length; i++) {
+            let row = $('<tr>');
+            row.append($('<td>').html(properties[i].caption));
+            let td = $('<td>');
+            let input = $('<' + properties[i].tag + '>').attr("id", properties[i].id);
+            for (let j = 0; j < properties[i].attrs.length; j++) {
+                input.attr(properties[i].attrs[j][0], properties[i].attrs[j][1]);
+            }
+            td.append(input);
+            row.append(td);
+            $('#simulatorControls').append(row);
+        }
     }
 
     $('#modeSelector').on('change', function(event) {
         applyMode($("select#modeSelector").val());
     });
 
-    // Executes when the page loads
-    $(window).on("load", function(e) {
-        updateInterval();
-        $(document.getElementById("simulatorControls")).hide();
-        registerMode({
-            name: "fpga_sim",
-            mainPanel: true
-        });
-        registerMode({
-            name: "serv_sim",
-            mainPanel: true
-
-        });
-        registerMode({
-            name: "real_mode",
-            mainPanel: true
-        });
-    });
+    function semicolonToAry(text) {
+        return text.split(';').map(Number);
+    }
 
     $("#pingButton").click(function() {
         updateContents();
@@ -99,7 +101,7 @@ $(document).ready(function() {
                 let td = $('<td>').attr('class', 'resizabletd').append(
                     $('<div>').attr('class', 'resizableDiv').attr('id', containerName)
                 );
-                row.append(td);         
+                row.append(td);
             }
             $('#chartsTable').append(row);
         }
@@ -135,46 +137,22 @@ $(document).ready(function() {
     }
 
     function updateContents() {
-        // Read coordinates of receivers
-        let a1 = document.getElementById('a1Coord').value.split(';');
-        let a2 = document.getElementById('a2Coord').value.split(';');
-        let a3 = document.getElementById('a3Coord').value.split(';');
-        let a4 = document.getElementById('a4Coord').value.split(';');
+        let mode = modes[$("select#modeSelector").val()];
+        let postData = {
+            mode: Number($("select#modeSelector").val()),
+            slice: semicolonToAry(document.getElementById('slice').value)
+        };
+        for (var i = 0; i < mode.props.length; i++) {
+            postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
+        }
 
-        let pc = ("0;0;0").split(';');
-        let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
-        let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
-        let d3 = Math.sqrt((pc[0] - a3[0])**2 + (pc[1] - a3[1])**2 + (pc[2] - a3[2])**2);
-        let d4 = Math.sqrt((pc[0] - a4[0])**2 + (pc[1] - a4[1])**2 + (pc[2] - a4[2])**2);
-        // let dMin = Math.min(d1, d2, d3, d4);
-        // let l1 = Math.floor((d1 - dMin)/speedOfSound*invNs);
+        // let pc = ("0;0;0").split(';');
+        // let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
+        // let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
+        // let d3 = Math.sqrt((pc[0] - a3[0])**2 + (pc[1] - a3[1])**2 + (pc[2] - a3[2])**2);
+        // let d4 = Math.sqrt((pc[0] - a4[0])**2 + (pc[1] - a4[1])**2 + (pc[2] - a4[2])**2);
 
-        let slice = document.getElementById('slice').value.split(';');
-        let sliceBeg = Number(slice[0]);
-        let sliceEnd = Number(slice[1]);
-        let threshold = Number(document.getElementById('threshold').value);
-        let frequency = Number(document.getElementById('frequency').value);
-        let pulseLen = Number(document.getElementById('pulseLen').value);
-        let amplitude = Number(document.getElementById('amplitude').value);
-        let sampleRate = Number(document.getElementById('sampleRate').value);
-        let mode = Number($("select#modeSelector").val());
-
-        // Post-query to server is space separated array of parameters for signal simulator
-        let postData = JSON.stringify({
-            mode: mode,
-            d1: d1, 
-            d2: d2, 
-            d3: d3, 
-            d4: d4, 
-            sliceBeg: sliceBeg, 
-            sliceEnd: sliceEnd, 
-            threshold: threshold, 
-            frequency: frequency, 
-            pulseLen: pulseLen, 
-            amplitude: amplitude, 
-            sampleRate: sampleRate,
-            kek: 123
-        });
+        postData = JSON.stringify(postData);
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
@@ -236,9 +214,30 @@ $(document).ready(function() {
         updateInterval();
     }); 
 
+    $("#setButton").click(function() {
+        $("#setButton").html("Set*");
+        let mode = modes[$("select#modeSelector").val()];
+        let postData = {
+            mode: 3,
+            slice: semicolonToAry(document.getElementById('slice').value)
+        };
+        for (var i = 0; i < mode.props.length; i++) {
+            postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
+        }
+        postData = JSON.stringify(postData);
+        $.ajax({
+            url: fastcgiAddress,
+            type: "POST",
+            data: postData,
+            success: function(response) {
+                $("#setButton").html("Set");
+            }
+        });
+    }); 
+
     // Hide and show controls panel
     function toggleSimulatorControls() {
-        $(document.getElementById("simulatorControls")).toggle();
+        $(document.getElementById("simulatorControlsDiv")).toggle();
     }
 
     $("#toggleSimulatorControls").click(function() {
@@ -256,4 +255,114 @@ $(document).ready(function() {
         }
         resizeCharts();
     }); 
+
+    // Executes when the page loads
+    $(window).on("load", function(e) {
+        console.log("indoc");
+        updateInterval();
+        $(document.getElementById("simulatorControlsDiv")).hide();
+        registerMode({
+            name: "fpga_sim",
+            props: [
+                {
+                    tag: "input",
+                    caption: "Threshold",
+                    id: "threshold",
+                    attrs: [["type", "number"], ["value", "0"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Frequency (Hz)",
+                    id: "frequency",
+                    attrs: [["type", 
+                    "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Needed frequency (Hz)",
+                    id: "neededFrequency",
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                }
+            ]
+        });
+        registerMode({
+            name: "serv_sim",
+            props: [
+                {
+                    tag: "input",
+                    caption: "Sample rate",
+                    id: "sampleRate",
+                    attrs: [["type", "number"], ["value", "150000"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Threshold",
+                    id: "threshold",
+                    attrs: [["type", "number"], ["value", "0"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Frequency (Hz)",
+                    id: "frequency",
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Pulse length",
+                    id: "pulseLen",
+                    attrs: [["type", "number"], ["value", "1"], ["min", "1"], ["max", "12"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Amplitude",
+                    id: "amplitude",
+                    attrs: [["type", "number"], ["value", "100"], ["min", "1"], ["max", "20000"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "A1",
+                    id: "a1Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                },
+                {
+                    tag: "input",
+                    caption: "A2",
+                    id: "a2Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                },
+                {
+                    tag: "input",
+                    caption: "A3",
+                    id: "a3Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                },
+                {
+                    tag: "input",
+                    caption: "A4",
+                    id: "a4Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                }
+            ]
+        });
+        registerMode({
+            name: "real_mode",
+        });
+        applyMode($("select#modeSelector").val());
+    });
 });
+
+$(window).on("load", function(e) {
+    console.log("outlog")
+})
