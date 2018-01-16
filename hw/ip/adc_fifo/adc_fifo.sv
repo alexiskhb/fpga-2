@@ -80,7 +80,7 @@ module adc_fifo (
     reg [7:0] state_after_pause;
     reg [7:0] state_fft;
 
-    reg [4:0] pause_cntr;
+    reg [3:0] pause_cntr;
 
     parameter WAIT     = 8'd0
             , FILL      = 8'd1
@@ -174,7 +174,14 @@ module adc_fifo (
 
     reg [15:0] sqrt_component_tmp;
     reg [31:0] mean_shifted_tmp;
+
+    reg [31:0] fft_tmp_real;
+    reg [31:0] fft_tmp_imag;
     
+    reg [31:0] mean_cntr;
+
+    reg        state_setup_flag;
+
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
@@ -187,8 +194,6 @@ module adc_fifo (
             end
         end
     end
-
-    reg [31:0] mean_cntr;
 
     always @ (posedge clk or posedge reset)
     begin
@@ -203,8 +208,16 @@ module adc_fifo (
         end
     end
 
-    reg [31:0] fft_tmp_real;
-    reg [31:0] fft_tmp_imag;
+    // always @ (posedge clk or posedge reset)
+    // begin
+    //     if (reset) begin
+    //         state_setup_flag <= 0;
+    //     end else begin
+    //         if (state == SETUP_DMA) begin
+    //             state_setup_flag <= 1;
+    //         end
+    //     end
+    // end
 
     always @ (posedge clk or posedge reset)
     begin
@@ -213,28 +226,18 @@ module adc_fifo (
             mean_sum <= 0;
             fft_good <= 3'd0;
         end else begin
+            if (state == SETUP_DMA && state_setup_flag == 0) begin
+                state_setup_flag <= 1'b1;
+            end else if (state_setup_flag == 1 && state_fft != FFT_IN1) begin
+                state_fft <= WAIT;
+                mean_sum <= 0;
+                fft_good <= 3'd0;
+                next_in <= 0;
+                state_setup_flag <= 0;
+            end
             case (state_fft)
                 WAIT:
                     begin
-                        // if (in_cntr[0] >= FFT_SIZE && fft_fifo0_out_valid == 1) begin
-                        //     current_index <= 0;
-                        //     mean_sum <= 0;
-                        //     next_in <= 1;
-                        //     fft_fifo0_out_ready <= 1'b1;
-                        //     state_fft <= FFT_IN1;
-                        // end else if (in_cntr[1] >= FFT_SIZE && fft_fifo1_out_valid == 1) begin
-                        //     current_index <= 0;
-                        //     mean_sum <= 0;
-                        //     next_in <= 1;
-                        //     fft_fifo1_out_ready <= 1'b1;
-                        //     state_fft <= FFT_IN1;
-                        // end else if (in_cntr[2] >= FFT_SIZE && fft_fifo2_out_valid == 1) begin
-                        //     current_index <= 0;
-                        //     mean_sum <= 0;
-                        //     next_in <= 1;
-                        //     fft_fifo2_out_ready <= 1'b1;
-                        //     state_fft <= FFT_IN1;
-                        // end
                         if (in_cntr[0] >= FFT_SIZE) begin
                             current_index <= 0;
                             fft_fifo0_out_ready <= 1'b1;
@@ -307,7 +310,7 @@ module adc_fifo (
                             fft_tmp_imag <= fft_imag_out[mean_cntr - 1];
                             X <= fft_tmp_real;
                             sqrt_value <= fft_tmp_imag;
-                            mean_sum = mean_sum + sqrt_result;
+                            mean_sum <= mean_sum + sqrt_result;
                             state_fft <= CALC_MEAN;
                         end
                     end
@@ -437,7 +440,12 @@ module adc_fifo (
                     end
                 END:
                     begin
-                        // state <= FILL;
+                        in_cntr[0] <= 32'd0;
+                        in_cntr[1] <= 32'd0;
+                        in_cntr[2] <= 32'd0;
+                        pause_cntr <= 0;
+                        adc_prev_channel <= 0;
+                        state <= FILL;
                     end
             endcase
         end
