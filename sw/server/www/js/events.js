@@ -73,6 +73,7 @@ $(document).ready(function() {
     }
 
     $("#pingButton").click(function() {
+        $("#pingButton").html("Ping*");
         updateContents();
     });
 
@@ -145,7 +146,7 @@ $(document).ready(function() {
         for (var i = 0; i < mode.props.length; i++) {
             postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
         }
-
+        let result = false;
         // let pc = ("0;0;0").split(';');
         // let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
         // let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
@@ -158,6 +159,7 @@ $(document).ready(function() {
             type: "POST",
             data: postData,
             success: function(response) {
+                $("#pingButton").html("Ping");
                 response = JSON.parse(response);
                 document.getElementById('delays').innerHTML = response.delays;
                 chartRows = response.data.length;
@@ -218,8 +220,9 @@ $(document).ready(function() {
         $("#setButton").html("Set*");
         let mode = modes[$("select#modeSelector").val()];
         let postData = {
-            mode: 3,
-            slice: semicolonToAry(document.getElementById('slice').value)
+            mode: Number($("select#modeSelector").val()),
+            slice: semicolonToAry(document.getElementById('slice').value),
+            is_setup: 1
         };
         for (var i = 0; i < mode.props.length; i++) {
             postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
@@ -266,6 +269,14 @@ $(document).ready(function() {
             props: [
                 {
                     tag: "input",
+                    caption: "Simulation frequency (Hz)",
+                    id: "simFrequency",
+                    attrs: [["type", 
+                    "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
                     caption: "Threshold",
                     id: "threshold",
                     attrs: [["type", "number"], ["value", "0"]],
@@ -275,14 +286,6 @@ $(document).ready(function() {
                     tag: "input",
                     caption: "Frequency (Hz)",
                     id: "frequency",
-                    attrs: [["type", 
-                    "number"], ["value", "23000"], ["min", "1"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Needed frequency (Hz)",
-                    id: "neededFrequency",
                     attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
                     transform: Number
                 }
@@ -307,8 +310,8 @@ $(document).ready(function() {
                 },
                 {
                     tag: "input",
-                    caption: "Frequency (Hz)",
-                    id: "frequency",
+                    caption: "Simulation frequency (Hz)",
+                    id: "simFrequency",
                     attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
                     transform: Number
                 },
@@ -358,6 +361,22 @@ $(document).ready(function() {
         });
         registerMode({
             name: "real_mode",
+            props: [
+                {
+                    tag: "input",
+                    caption: "Threshold",
+                    id: "threshold",
+                    attrs: [["type", "number"], ["value", "0"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Frequency (Hz)",
+                    id: "frequency",
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                }
+            ]
         });
         applyMode($("select#modeSelector").val());
     });

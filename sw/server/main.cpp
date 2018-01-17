@@ -85,10 +85,9 @@ private:
     enum Mode {
         fpga_sim_mode = 0, serv_sim_mode = 1, real_mode = 2, apply_settings = 3
     };
-    double post_d1 = 0, post_d2 = 0, post_d3 = 0, post_d4 = 0;
-    int post_slice_beg = 0, post_slice_end = 250, post_frequency = 20000, post_threshold = 5;
-    int post_pulse_len = 1, post_amplitude = 1000, post_sample_rate = 20000, mode;
-    std::vector<int> v;
+    double post_d1, post_d2, post_d3, post_d4;
+    int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_threshold;
+    int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0;
 private:
     template <class T>
     using json_to_variable = std::vector<std::pair<std::reference_wrapper<T>, std::string>>;
@@ -109,6 +108,7 @@ private:
     bool inProcessor()
     {
         const json post = json::parse(environment().postBuffer().begin(), environment().postBuffer().end());
+        std::vector<int> v;
         std::cout << post << std::endl;
         read_json<int>(post, {
             {mode, "mode"},
@@ -124,6 +124,8 @@ private:
             {post_amplitude, "amplitude"},
             {post_sample_rate, "sampleRate"},
             {post_threshold, "threshold"},
+            {post_is_setup, "is_setup"},
+            {post_sim_frequency, "simFrequency"},
         });
         read_json<std::vector<int>>(post, {
             {v, "slice"}
@@ -131,7 +133,6 @@ private:
         post_slice_beg = v.front();
         post_slice_end = v.back();
         if (mode == fpga_sim_mode) {
-            driver.send(IOCTL_SET_TRESHOLD, post_threshold);
             return true;
         }
         read_json<double>(post, {
@@ -140,6 +141,12 @@ private:
             {post_d3, "d3"},
             {post_d4, "d4"},
         });
+        if (post_is_setup) {
+            if (mode == fpga_sim_mode || mode == real_mode) {
+                driver.send(IOCTL_SET_TRESHOLD, post_threshold);
+            }
+            return true;
+        }
         return true;
     }
 
@@ -147,10 +154,10 @@ private:
     {
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
+        if (post_is_setup) {
+            return true;
+        }
         if (driver.is_ready()) {
-            if (mode == apply_settings) {
-                return true;
-            }
             std::vector<data_type> data;
             std::vector<fourier_type> fourier_result;
             std::vector<hilbert_type> hilbert_result;
@@ -163,7 +170,7 @@ private:
             }
             if (mode == serv_sim_mode) {
                 blocks_num = 3;
-                data = Pinger{post_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
+                data = Pinger{post_sim_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
             }
             const int block_size = data.size()/blocks_num;
 
