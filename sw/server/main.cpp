@@ -97,7 +97,7 @@ private:
                 T t = post.at(p.second);
                 p.first.get() = t;
             } catch (const json::exception& e) {
-                if (e.id != 4030) {
+                if (e.id != 403) {
                     std::cerr << e.what() << '\n';
                 }
             }
