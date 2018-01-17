@@ -13,7 +13,7 @@
    {
       datum _sortIndex
       {
-         value = "10";
+         value = "9";
          type = "int";
       }
    }
@@ -29,8 +29,16 @@
    {
       datum _sortIndex
       {
-         value = "12";
+         value = "11";
          type = "int";
+      }
+   }
+   element adc_fifo.avalon_slave
+   {
+      datum baseAddress
+      {
+         value = "327680";
+         type = "String";
       }
    }
    element clk_0
@@ -45,7 +53,7 @@
    {
       datum _sortIndex
       {
-         value = "16";
+         value = "15";
          type = "int";
       }
    }
@@ -53,31 +61,15 @@
    {
       datum _sortIndex
       {
-         value = "11";
+         value = "10";
          type = "int";
-      }
-   }
-   element dsp
-   {
-      datum _sortIndex
-      {
-         value = "9";
-         type = "int";
-      }
-   }
-   element dsp.avalon_slave
-   {
-      datum baseAddress
-      {
-         value = "327680";
-         type = "String";
       }
    }
    element fft_dft_0
    {
       datum _sortIndex
       {
-         value = "14";
+         value = "13";
          type = "int";
       }
    }
@@ -85,7 +77,7 @@
    {
       datum _sortIndex
       {
-         value = "17";
+         value = "16";
          type = "int";
       }
    }
@@ -93,7 +85,7 @@
    {
       datum _sortIndex
       {
-         value = "18";
+         value = "17";
          type = "int";
       }
    }
@@ -101,7 +93,7 @@
    {
       datum _sortIndex
       {
-         value = "19";
+         value = "18";
          type = "int";
       }
    }
@@ -225,7 +217,7 @@
    {
       datum _sortIndex
       {
-         value = "13";
+         value = "12";
          type = "int";
       }
    }
@@ -613,11 +605,19 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sqrt_0
    {
       datum _sortIndex
       {
-         value = "15";
+         value = "14";
          type = "int";
       }
    }
@@ -693,7 +693,6 @@
  <interface name="hps_0_h2f_user0_clock" internal="hps_0.h2f_user0_clock" />
  <interface name="hps_0_hps_io" internal="hps_0.hps_io" type="conduit" dir="end" />
  <interface name="memory" internal="hps_0.memory" type="conduit" dir="end" />
- <interface name="ports" internal="dsp.portio" type="conduit" dir="end" />
  <interface name="reset" internal="clk_0.clk_in_reset" type="reset" dir="end" />
  <module name="adc" kind="adc" version="1.0" enabled="1" />
  <module name="adc_fifo" kind="adc_fifo" version="1.0" enabled="1" />
@@ -729,7 +728,6 @@
   <parameter name="writeSlaveAddressWidthMax" value="32" />
   <parameter name="writeSlaveDataWidthMax" value="32" />
  </module>
- <module name="dsp" kind="dsp" version="1.0" enabled="1" />
  <module name="fft_dft_0" kind="fft_dft" version="1.0" enabled="1" />
  <module
    name="fft_fifo_0"
@@ -1644,15 +1642,6 @@
  <connection
    kind="avalon"
    version="17.1"
-   start="dsp.avalon_master"
-   end="hps_0.f2h_sdram0_data">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
- <connection
-   kind="avalon"
-   version="17.1"
    start="adc_fifo.avalon_master_csr_fifo"
    end="sc_fifo_0.csr">
   <parameter name="arbitrationPriority" value="1" />
@@ -1708,7 +1697,7 @@
    kind="avalon"
    version="17.1"
    start="hps_0.h2f_lw_axi_master"
-   end="dsp.avalon_slave">
+   end="adc_fifo.avalon_slave">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x00050000" />
   <parameter name="defaultConnection" value="false" />
@@ -1826,11 +1815,6 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
-   start="dsp.avalon_streaming_source"
-   end="adc_fifo.avalon_ss_dsp" />
- <connection
-   kind="avalon_streaming"
-   version="17.1"
    start="sqrt_0.avalon_streaming_source"
    end="adc_fifo.avalon_ss_sqrt_out" />
  <connection
@@ -1929,11 +1913,6 @@
    start="pll_0.outclk2"
    end="intr_capturer_0.clock" />
  <connection kind="clock" version="17.1" start="pll_0.outclk2" end="sqrt_0.clock" />
- <connection
-   kind="clock"
-   version="17.1"
-   start="pll_0.outclk2"
-   end="dsp.clock_sink" />
  <connection
    kind="clock"
    version="17.1"
@@ -2054,11 +2033,6 @@
    version="17.1"
    start="clk_0.clk_reset"
    end="intr_capturer_0.reset_sink" />
- <connection
-   kind="reset"
-   version="17.1"
-   start="clk_0.clk_reset"
-   end="dsp.reset_sink" />
  <connection
    kind="reset"
    version="17.1"
