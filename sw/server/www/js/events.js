@@ -146,11 +146,12 @@ $(document).ready(function() {
             slice: semicolonToAry(document.getElementById('slice').value),
             requetstId: ++requetstId
         };
-        for (var i = 0; i < mode.props.length; i++) {
-            let value = document.getElementById(mode.props[i].id).value;
-            postData[mode.props[i].id] = mode.props[i].transform(value);
+        if (modes[$("select#modeSelector").val()].name == "serv_sim") {
+            for (var i = 0; i < mode.props.length; i++) {
+                let value = document.getElementById(mode.props[i].id).value;
+                postData[mode.props[i].id] = mode.props[i].transform(value);
+            }
         }
-        let result = false;
         // let pc = ("0;0;0").split(';');
         // let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
         // let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
@@ -165,6 +166,9 @@ $(document).ready(function() {
             success: function(response) {
                 $("#pingButton").html("Ping");
                 response = JSON.parse(response);
+                if (response.ready !== undefined) {
+                    return;
+                }
                 document.getElementById('calculatedDelays').innerHTML = response.delays;
                 chartRows = response.data.length;
                 chartCols = 2;

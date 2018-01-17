@@ -38,6 +38,10 @@ public:
         int buf_len = block_size*blocks_num;
         data_type buf[buf_len] = {0};
         int result = read(ham_driver, buf, buf_len * sizeof(data_type));
+        if (result == 0) {
+            out_data.clear();
+            return 0;
+        }
         out_data.resize(buf_len);
         for (int i = 0; i < buf_len; i += blocks_num) {
             out_data[0*block_size + i/blocks_num] = buf[i];
@@ -61,8 +65,10 @@ public:
         }
         return true;
     }
+
 private:
     int ham_driver;
+    bool m_is_ready;
 };
 
 Driver driver;
@@ -114,7 +120,6 @@ private:
         read_json<int>(post, {
             {mode, "mode"},
         });
-        
         read_json<int>(post, {
             {post_slice_beg, "sliceBeg"},
             {post_slice_end, "sliceEnd"},
@@ -171,6 +176,10 @@ private:
             if (mode == serv_sim_mode) {
                 blocks_num = 3;
                 data = Pinger{post_sim_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
+            }
+            if (blocks_num == 0) {
+                out << "{\"ready\":0}";
+                return true;
             }
             const int block_size = data.size()/blocks_num;
 
