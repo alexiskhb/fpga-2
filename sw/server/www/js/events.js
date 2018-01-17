@@ -166,7 +166,7 @@ $(document).ready(function() {
             success: function(response) {
                 $("#pingButton").html("Ping");
                 response = JSON.parse(response);
-                if (response.ready !== undefined) {
+                if (Object.getOwnPropertyNames(response).length == 1) {
                     return;
                 }
                 document.getElementById('calculatedDelays').innerHTML = response.delays;
@@ -266,10 +266,9 @@ $(document).ready(function() {
             }
         }
         resizeCharts();
-    }); 
+    });
 
-    // Executes when the page loads
-    $(window).on("load", function(e) {
+    function init() {
         console.log("indoc");
         updateInterval();
         $(document.getElementById("simulatorControlsDiv")).hide();
@@ -408,7 +407,9 @@ $(document).ready(function() {
             ]
         });
         applyMode($("select#modeSelector").val());
-    });
+    }
+    
+    init();
 });
 
 $(window).on("load", function(e) {
