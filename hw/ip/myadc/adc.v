@@ -86,7 +86,7 @@ begin
     begin
         measure_start <= 1'b0;
         wait_measure_done <= 1'b0;
-        measure_ch <= 3'd2;
+        measure_ch <= 3'd0;
     end
     else if (~measure_start & ~wait_measure_done)
     begin

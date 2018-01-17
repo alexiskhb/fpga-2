@@ -398,12 +398,10 @@ module adc_fifo (
                     end
                 PUSH:
                     begin
-                        if (align_event == 1) begin
-                            in_cntr[index[adc_channel - 1]] <= in_cntr[index[adc_channel - 1]] + 1;
-                            data_cntrl_channel <= index[adc_channel - 1];
-                            data_cntrl_valid <= 1'b1;
-                            data_cntrl_data <= adc_data;
-                        end
+                        in_cntr[index[adc_channel - 1]] <= in_cntr[index[adc_channel - 1]] + 1;
+                        data_cntrl_channel <= index[adc_channel - 1];
+                        data_cntrl_valid <= 1'b1;
+                        data_cntrl_data <= adc_data;
                         fifo_out_ready <= 1'b0;
                         fifo_in_valid <= 1'b1;
                         fifo_in_data <= adc_data;
