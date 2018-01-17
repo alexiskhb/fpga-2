@@ -144,7 +144,8 @@ $(document).ready(function() {
             slice: semicolonToAry(document.getElementById('slice').value)
         };
         for (var i = 0; i < mode.props.length; i++) {
-            postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
+            let value = document.getElementById(mode.props[i].id).value;
+            postData[mode.props[i].id] = mode.props[i].transform(value);
         }
         let result = false;
         // let pc = ("0;0;0").split(';');
@@ -161,7 +162,7 @@ $(document).ready(function() {
             success: function(response) {
                 $("#pingButton").html("Ping");
                 response = JSON.parse(response);
-                document.getElementById('delays').innerHTML = response.delays;
+                document.getElementById('calculatedDelays').innerHTML = response.delays;
                 chartRows = response.data.length;
                 chartCols = 2;
 
@@ -236,7 +237,7 @@ $(document).ready(function() {
                 $("#setButton").html("Set");
             }
         });
-    }); 
+    });
 
     // Hide and show controls panel
     function toggleSimulatorControls() {
@@ -271,8 +272,7 @@ $(document).ready(function() {
                     tag: "input",
                     caption: "Simulation frequency (Hz)",
                     id: "simFrequency",
-                    attrs: [["type", 
-                    "number"], ["value", "23000"], ["min", "1"]],
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
                     transform: Number
                 },
                 {
@@ -288,6 +288,13 @@ $(document).ready(function() {
                     id: "frequency",
                     attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
                     transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Delays",
+                    id: "delays",
+                    attrs: [["type", "text"], ["value", "0;0;0;0"]],
+                    transform: semicolonToAry
                 }
             ]
         });

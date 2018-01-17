@@ -88,6 +88,7 @@ private:
     double post_d1, post_d2, post_d3, post_d4;
     int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_threshold;
     int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0;
+    std::vector<int> post_delays;
 private:
     template <class T>
     using json_to_variable = std::vector<std::pair<std::reference_wrapper<T>, std::string>>;
@@ -128,7 +129,8 @@ private:
             {post_sim_frequency, "simFrequency"},
         });
         read_json<std::vector<int>>(post, {
-            {v, "slice"}
+            {v, "slice"},
+            {post_delays, "delays"},
         });
         post_slice_beg = v.front();
         post_slice_end = v.back();
