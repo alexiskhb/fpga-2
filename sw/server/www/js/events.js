@@ -5,6 +5,8 @@ $(document).ready(function() {
     const invNs = 1e8;
     const speedOfSound = 1500;
 
+    let requetstId = 0;
+
     // __________________________
     // | chart00 | chart01 | ...
     // | chart10 | chart11 | ...
@@ -141,7 +143,8 @@ $(document).ready(function() {
         let mode = modes[$("select#modeSelector").val()];
         let postData = {
             mode: Number($("select#modeSelector").val()),
-            slice: semicolonToAry(document.getElementById('slice').value)
+            slice: semicolonToAry(document.getElementById('slice').value),
+            requetstId: ++requetstId
         };
         for (var i = 0; i < mode.props.length; i++) {
             let value = document.getElementById(mode.props[i].id).value;
@@ -223,7 +226,8 @@ $(document).ready(function() {
         let postData = {
             mode: Number($("select#modeSelector").val()),
             slice: semicolonToAry(document.getElementById('slice').value),
-            is_setup: 1
+            is_setup: 1,
+            requetstId: ++requetstId
         };
         for (var i = 0; i < mode.props.length; i++) {
             postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
@@ -277,9 +281,16 @@ $(document).ready(function() {
                 },
                 {
                     tag: "input",
-                    caption: "Threshold",
-                    id: "threshold",
+                    caption: "FFT threshold",
+                    id: "fftThreshold",
                     attrs: [["type", "number"], ["value", "0"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Hilbert threshold",
+                    id: "hilbertThreshold",
+                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
                     transform: Number
                 },
                 {
@@ -310,9 +321,9 @@ $(document).ready(function() {
                 },
                 {
                     tag: "input",
-                    caption: "Threshold",
-                    id: "threshold",
-                    attrs: [["type", "number"], ["value", "0"]],
+                    caption: "Hilbert threshold",
+                    id: "hilbertThreshold",
+                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
                     transform: Number
                 },
                 {
@@ -371,9 +382,16 @@ $(document).ready(function() {
             props: [
                 {
                     tag: "input",
-                    caption: "Threshold",
-                    id: "threshold",
+                    caption: "FFT threshold",
+                    id: "fftThreshold",
                     attrs: [["type", "number"], ["value", "0"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Hilbert threshold",
+                    id: "hilbertThreshold",
+                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
                     transform: Number
                 },
                 {

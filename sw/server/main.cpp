@@ -10,6 +10,7 @@
 #include <ctime>
 #include <functional>
 #include <random>
+#include <mutex>
 
 #include "processing.h"
 #include "pinger.h"
@@ -35,22 +36,14 @@ public:
         int blocks_num = 3;
         int block_size = 1024;
         int buf_len = block_size*blocks_num;
-        data_type buf[buf_len];
+        data_type buf[buf_len] = {0};
         int result = read(ham_driver, buf, buf_len * sizeof(data_type));
-        for (int i = 0; i < buf_len; ++i) {
-            if ((buf[i] & 0x00001000) == 0x00001000) {
-                buf[i] = ~(buf[i] ^ 0x00001000) + 1;
-            }
-        }
-
         out_data.resize(buf_len);
-
         for (int i = 0; i < buf_len; i += blocks_num) {
             out_data[0*block_size + i/blocks_num] = buf[i];
             out_data[1*block_size + i/blocks_num] = buf[i + 1];
             out_data[2*block_size + i/blocks_num] = buf[i + 2];
         }
-
         return blocks_num;
     }
 
@@ -73,6 +66,7 @@ private:
 };
 
 Driver driver;
+std::mutex json_mutex;
 
 class WebClientRequest: public Fastcgipp::Request<wchar_t>
 {
@@ -80,13 +74,15 @@ public:
     using json = nlohmann::json;
 
     WebClientRequest() : Fastcgipp::Request<wchar_t>(5*1024)
-    {}
+    {
+        std::cerr << "Request created" << std::endl;
+    }
 private:
     enum Mode {
         fpga_sim_mode = 0, serv_sim_mode = 1, real_mode = 2, apply_settings = 3
     };
-    double post_d1, post_d2, post_d3, post_d4;
-    int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_threshold;
+    double post_d1, post_d2, post_d3, post_d4, post_hilbert_threshold;
+    int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_fft_threshold;
     int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0;
     std::vector<int> post_delays;
 private:
@@ -101,22 +97,24 @@ private:
                 T t = post.at(p.second);
                 p.first.get() = t;
             } catch (const json::exception& e) {
-                std::cerr << e.what() << std::endl;
+                if (e.id != 4030) {
+                    std::cerr << e.what() << '\n';
+                }
             }
         }
     }
 
     bool inProcessor()
     {
+        std::lock_guard<std::mutex> gd(json_mutex);
+        std::cerr << "inProcessor started" << std::endl;
         const json post = json::parse(environment().postBuffer().begin(), environment().postBuffer().end());
         std::vector<int> v;
         std::cout << post << std::endl;
         read_json<int>(post, {
             {mode, "mode"},
         });
-        if (mode == real_mode) {
-            return true;
-        }
+        
         read_json<int>(post, {
             {post_slice_beg, "sliceBeg"},
             {post_slice_end, "sliceEnd"},
@@ -124,7 +122,7 @@ private:
             {post_pulse_len, "pulseLen"},
             {post_amplitude, "amplitude"},
             {post_sample_rate, "sampleRate"},
-            {post_threshold, "threshold"},
+            {post_fft_threshold, "fftThreshold"},
             {post_is_setup, "is_setup"},
             {post_sim_frequency, "simFrequency"},
         });
@@ -134,21 +132,21 @@ private:
         });
         post_slice_beg = v.front();
         post_slice_end = v.back();
-        if (mode == fpga_sim_mode) {
-            return true;
-        }
+
         read_json<double>(post, {
             {post_d1, "d1"},
             {post_d2, "d2"},
             {post_d3, "d3"},
             {post_d4, "d4"},
+            {post_hilbert_threshold, "hilbertThreshold"},
         });
+        std::cerr << std::endl;
         if (post_is_setup) {
             if (mode == fpga_sim_mode || mode == real_mode) {
-                driver.send(IOCTL_SET_TRESHOLD, post_threshold);
+                driver.send(IOCTL_SET_TRESHOLD, post_fft_threshold);
             }
-            return true;
         }
+        std::cerr << "inProcessor ended" << std::endl;
         return true;
     }
 
@@ -177,7 +175,7 @@ private:
             const int block_size = data.size()/blocks_num;
 
             std::vector<data_type> delays(blocks_num);
-            process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), post_threshold, hilbert_result, fourier_result);
+            process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), post_hilbert_threshold, hilbert_result, fourier_result);
 
             const int slice_beg = std::min(block_size, std::max(post_slice_beg, 0));
             const int slice_end = std::max(slice_beg, std::min(post_slice_end, block_size));
