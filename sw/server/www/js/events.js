@@ -38,6 +38,7 @@ $(document).ready(function() {
     let chartCols = 0;
 
     let modes = {};
+    let savedValues = {};
 
     function registerMode(properties) {
         let name = properties.name;
@@ -45,6 +46,10 @@ $(document).ready(function() {
         let option = $('<option>').attr('value', value).html(name);
         $('#modeSelector').append(option);
         modes[value] = properties;
+    }
+
+    function inputChanged() {
+        $("#setButton").html("Set*");
     }
 
     function applyMode(modeValue) {
@@ -58,8 +63,13 @@ $(document).ready(function() {
             let td = $('<td>');
             let input = $('<' + properties[i].tag + '>').attr("id", properties[i].id);
             for (let j = 0; j < properties[i].attrs.length; j++) {
-                input.attr(properties[i].attrs[j][0], properties[i].attrs[j][1]);
+                if (properties[i].attrs[j][0] == "value" && properties[i].id in savedValues) {
+                    input.attr(properties[i].attrs[j][0], savedValues[properties[i].id]);
+                } else {
+                    input.attr(properties[i].attrs[j][0], properties[i].attrs[j][1]);
+                }
             }
+            input.on('change', inputChanged);
             td.append(input);
             row.append(td);
             $('#simulatorControls').append(row);
@@ -225,7 +235,7 @@ $(document).ready(function() {
     }); 
 
     $("#setButton").click(function() {
-        $("#setButton").html("Set*");
+        $("#setButton").html("Set**");
         let mode = modes[$("select#modeSelector").val()];
         let postData = {
             mode: Number($("select#modeSelector").val()),
@@ -235,6 +245,7 @@ $(document).ready(function() {
         };
         for (var i = 0; i < mode.props.length; i++) {
             postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
+            savedValues[mode.props[i].id] = document.getElementById(mode.props[i].id).value;
         }
         postData = JSON.stringify(postData);
         $.ajax({
@@ -411,7 +422,3 @@ $(document).ready(function() {
     
     init();
 });
-
-$(window).on("load", function(e) {
-    console.log("outlog")
-})
