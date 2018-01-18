@@ -29,6 +29,7 @@ public:
     void send(int cmd, unsigned long arg)
     {
         ioctl(ham_driver, cmd, arg);
+        std::cout << "ioctl " << cmd << " " << arg << std::endl;
     }
 
     int recv(int cmd, std::vector<data_type>& out_data) 
@@ -148,7 +149,13 @@ private:
         std::cerr << std::endl;
         if (post_is_setup) {
             if (mode == fpga_sim_mode || mode == real_mode) {
-                driver.send(IOCTL_SET_TRESHOLD, post_fft_threshold);
+                unsigned int freq = 0;
+                unsigned int freq_comp = post_frequency / 620;
+                unsigned int up_half = ((freq_comp / 2) << 16);
+                unsigned int down_half = freq_comp % 2;
+                freq = up_half | down_half;
+                driver.send(IOCTL_SET_FFT_FREQ, freq);
+                driver.send(IOCTL_SET_THRESHOLD, post_fft_threshold);
             }
         }
         std::cerr << "inProcessor ended" << std::endl;
