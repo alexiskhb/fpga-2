@@ -19,7 +19,8 @@
 
 
 #define MODULE_OFFSET                  (ham_drv_mem + 0x00050000)
-#define GET_ADC_OFFSET                 (MODULE_OFFSET + 1 * sizeof(u32))
+#define SET_FFT_FREQ_OFFSET            (MODULE_OFFSET)
+#define SET_THRESHOLD_OFFSET           (MODULE_OFFSET + 4)
 
 #define DMA_MODULE_OFFSET              (ham_drv_mem + 0x00000000)
 #define DMA_STATUS_REG_OFFSET          (DMA_MODULE_OFFSET)
@@ -139,6 +140,14 @@ static ssize_t ham_drv_read(struct file *filep, char __user *out_buffer, size_t 
 static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     switch (cmd) {
+        case IOCTL_SET_FFT_FREQ:
+            printk(KERN_INFO "ham_drv: ioctl fft freq %lu\n", arg);
+            iowrite32(arg, SET_FFT_FREQ_OFFSET);
+            return 0;
+        case IOCTL_SET_THRESHOLD:
+            printk(KERN_INFO "ham_drv: ioctl threshold freq %lu\n", arg);
+            iowrite32(arg, SET_THRESHOLD_OFFSET);
+            return 0;
         default:
             printk(KERN_ALERT "ham_drv: wrong ioctl command %d\n", cmd);
             return -ENOIOCTLCMD;
