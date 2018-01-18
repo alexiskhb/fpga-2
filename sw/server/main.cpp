@@ -32,24 +32,47 @@ public:
     int recv(int cmd, std::vector<data_type>& out_data) 
     {
         int blocks_num = 3;
-        int block_size = 1024;
+        int block_size = 256;
         int buf_len = block_size*blocks_num;
         data_type buf[buf_len];
         int result = read(ham_driver, buf, buf_len * sizeof(data_type));
-        for (int i = 0; i < buf_len; ++i) {
-            if ((buf[i] & 0x00001000) == 0x00001000) {
-                buf[i] = ~(buf[i] ^ 0x00001000) + 1;
-            }
-        }
 
+        // for (int i = 0; i < buf_len; ++i) {
+        //     if ((buf[i] & 0x00001000) == 0x00001000) {
+        //         buf[i] = ~(buf[i] ^ 0x00001000) + 1;
+        //     }
+        // }
+        std::cout << result << std::endl;
         out_data.resize(buf_len);
 
-        for (int i = 0; i < buf_len; i += blocks_num) {
-            out_data[0*block_size + i/blocks_num] = buf[i];
-            out_data[1*block_size + i/blocks_num] = buf[i + 1];
-            out_data[2*block_size + i/blocks_num] = buf[i + 2];
+        // for (int i = 0; i < buf_len; i += blocks_num) {
+        //     out_data[0*block_size + i/blocks_num] = buf[i];
+        //     out_data[1*block_size + i/blocks_num] = buf[i + 1];
+        //     out_data[2*block_size + i/blocks_num] = buf[i + 2];
+        // }
+        for (int i = 0; i < block_size; ++i) {
+            out_data[i] = buf[i];
+        }
+        int real_index = 256;
+        int imag_index = 512;
+        int abs_index  = 512;
+        for (int i = block_size; i < 3 * block_size; ++i) {
+            if (i % 2 == 0) {
+                out_data[real_index++] = buf[i];
+            } else {
+                out_data[imag_index++] = buf[i];
+            }
+        }
+        for (int i = 0; i < block_size; ++i) {
+            int real = out_data[256 + i];
+            int imag = out_data[512 + i];
+            out_data[abs_index++] = sqrt(real * real + imag * imag);
         }
 
+        std::cout << std::endl;
+        for (int i = 0; i < buf_len; ++i) {
+            std::cout << buf[i] << " ";
+        }
         return blocks_num;
     }
 

@@ -6,6 +6,8 @@
 #include <linux/io.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
+#include <linux/spinlock_types.h>
 #include <asm/uaccess.h>
 #include "ioctl_commands.h"
 
@@ -17,7 +19,8 @@
 
 
 #define MODULE_OFFSET                  (ham_drv_mem + 0x00050000)
-#define GET_ADC_OFFSET                 (MODULE_OFFSET + 1 * sizeof(u32))
+#define SET_FFT_FREQ_OFFSET            (MODULE_OFFSET)
+#define SET_THRESHOLD_OFFSET           (MODULE_OFFSET + 4)
 
 #define DMA_MODULE_OFFSET              (ham_drv_mem + 0x00000000)
 #define DMA_STATUS_REG_OFFSET          (DMA_MODULE_OFFSET)
@@ -58,9 +61,11 @@ static struct device *ham_drv_device = NULL;
 
 static int major_number;
 
-static int adc_value = 0;
 static void *buffer;
 
+static DEFINE_SPINLOCK(dma_lock);
+static int dma_complete = 0;
+static unsigned long irq_flags;
 
 static void* ham_drv_dma_get_reg_offset(enum DmaRegisters reg)
 {
@@ -107,7 +112,8 @@ static void ham_drv_dma_print_registers(void)
 
 static void ham_drv_dma_print_data(void)
 {
-    for (int i = 0; i < DMA_BUFFER_SIZE; ++i) {
+    int i;
+    for (i = 0; i < DMA_BUFFER_SIZE; ++i) {
         unsigned char byte = (*((unsigned char *)(buffer + i)));
         printk(KERN_INFO "ham_drv: dma data %2d: %02X(%3u)\n", i, byte, byte);
     }
@@ -115,17 +121,33 @@ static void ham_drv_dma_print_data(void)
 
 static ssize_t ham_drv_read(struct file *filep, char __user *out_buffer, size_t count, loff_t *offset)
 {
-    if (copy_to_user(out_buffer, buffer, DMA_BUFFER_SIZE)) {
-        return -EINVAL;
+    if (spin_trylock_irqsave(&dma_lock, irq_flags) != 0) {
+        if (dma_complete == 1) {
+            dma_complete = 0;
+            if (copy_to_user(out_buffer, buffer, DMA_BUFFER_SIZE)) {
+                spin_unlock_irqrestore(&dma_lock, irq_flags);
+                return -EINVAL;
+            }
+            spin_unlock_irqrestore(&dma_lock, irq_flags);
+            return DMA_BUFFER_SIZE;
+        } else {
+            spin_unlock_irqrestore(&dma_lock, irq_flags);
+        }
     }
-    return DMA_BUFFER_SIZE;
+    return 0;
 }
 
 static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     switch (cmd) {
-        case IOCTL_GET_ADC_VALUE:
-            return put_user(adc_value, (int __user *)(arg));
+        case IOCTL_SET_FFT_FREQ:
+            printk(KERN_INFO "ham_drv: ioctl fft freq %lu\n", arg);
+            iowrite32(arg, SET_FFT_FREQ_OFFSET);
+            return 0;
+        case IOCTL_SET_THRESHOLD:
+            printk(KERN_INFO "ham_drv: ioctl threshold freq %lu\n", arg);
+            iowrite32(arg, SET_THRESHOLD_OFFSET);
+            return 0;
         default:
             printk(KERN_ALERT "ham_drv: wrong ioctl command %d\n", cmd);
             return -ENOIOCTLCMD;
@@ -147,6 +169,8 @@ static irqreturn_t ham_drv_interrupt_dma_complete(int irq, void *dev_id)
     }
     ham_drv_dma_write_reg(DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_LEEN, CONTROL);
     ham_drv_dma_write_reg(0, STATUS);
+    dma_complete = 1;
+    spin_unlock(&dma_lock);
     return IRQ_HANDLED;
 }
 
@@ -156,6 +180,8 @@ static irqreturn_t ham_drv_interrupt_dma_ready(int irq, void *dev_id)
     if (irq != INTERRUPT_DMA_READY) {
         return IRQ_NONE;
     }
+    spin_lock(&dma_lock);
+    dma_complete = 0;
     unsigned int control_reg = DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_INTERRUPT | DMA_CONTROL_REG_BIT_LEEN;
     ham_drv_dma_write_reg(control_reg, CONTROL);
     ham_drv_dma_write_reg((unsigned int)buffer, WRITEADDRESS);
@@ -168,6 +194,7 @@ static irqreturn_t ham_drv_interrupt_dma_ready(int irq, void *dev_id)
 static int __init ham_drv_init(void)
 {
     int ret = 0;
+    dma_complete = 0;
 
     major_number = register_chrdev(0, DEVICE_NAME, &ham_drv_fops);
     if (major_number < 0) {

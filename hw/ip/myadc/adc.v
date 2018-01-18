@@ -34,7 +34,7 @@ input                                   slave_address;
 input                                   slave_read;
 output    reg             [15:0]        slave_readdata;
 
-output    reg signed      [12:0]        streaming_source_data;
+output    reg signed      [15:0]        streaming_source_data;
 output    reg                           streaming_source_valid;
 output    reg             [2:0]         streaming_source_channel;
 
@@ -50,7 +50,7 @@ input                                   SDO;
 `define READ_REG_ADC_VALUE              0
 
 wire slave_read_data;
-wire [11:0] measure_dataread;
+wire signed [11:0] measure_dataread;
 wire measure_done;
 
 assign slave_read_data = (~slave_chipselect && ~slave_read && slave_address == `READ_REG_ADC_VALUE) ?1'b1:1'b0;
@@ -65,7 +65,7 @@ begin
             slave_readdata <= {3'h0, streaming_source_data};
         if(measure_done) begin
             streaming_source_valid <= 1'b1;
-            streaming_source_data <= {1'b0, measure_dataread} - 12'h800;
+            streaming_source_data <= $signed({4'd0, measure_dataread}) - 16'sh800;
             streaming_source_channel <= measure_ch;
         end else begin
             streaming_source_valid <= 1'b0;
@@ -86,7 +86,7 @@ begin
     begin
         measure_start <= 1'b0;
         wait_measure_done <= 1'b0;
-        measure_ch <= 3'd1;
+        measure_ch <= 3'd0;
     end
     else if (~measure_start & ~wait_measure_done)
     begin
