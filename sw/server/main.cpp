@@ -35,7 +35,7 @@ public:
     int recv(int cmd, std::vector<data_type>& out_data) 
     {
         int blocks_num = 3;
-        int block_size = 256;
+        int block_size = 1024;
         int buf_len = block_size*blocks_num;
         data_type buf[buf_len] = {0};
         int result = read(ham_driver, buf, buf_len * sizeof(data_type));
