@@ -484,7 +484,7 @@ module adc_fifo (
             treshold_param <= 10;
             changed_param <= 0;
         end else begin
-            if (reset_changed_param <= 1) begin
+            if (reset_changed_param == 1) begin
                 changed_param <= 0;
             end else 
             if (slave_chipselect) begin
