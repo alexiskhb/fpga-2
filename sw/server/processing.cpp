@@ -1,6 +1,9 @@
 #include <fftw3.h>
 #include <cmath>
 #include "processing.h"
+#include <mutex>
+
+std::mutex fftw3_plan_locker;
 
 void process_ping_guilbert(const data_type* data, const int blocks_num, const int block_size, 
                            data_type* data_out, const float threshold, std::vector<hilbert_type>& hilbert_out,
@@ -14,9 +17,13 @@ void process_ping_guilbert(const data_type* data, const int blocks_num, const in
     hilbert_out.resize(block_size*blocks_num);
     fourier_out.resize(block_size*blocks_num);
 
+    fftw3_plan_locker.lock();
     for (int i = 0; i < blocks_num; ++i) {
         plan[i] = fftw_plan_dft_1d(block_size, in_complex[i], out_complex[i], FFTW_FORWARD, FFTW_ESTIMATE);
         plan_inv[i] = fftw_plan_dft_1d(block_size, in_complex[i], out_complex[i], FFTW_BACKWARD, FFTW_ESTIMATE);
+    }
+    fftw3_plan_locker.unlock();
+    for (int i = 0; i < blocks_num; ++i) {
         tmp = data[block_size * i];
         max_n = -1;
         for (int j = 0; j < block_size; ++j) {
@@ -26,6 +33,7 @@ void process_ping_guilbert(const data_type* data, const int blocks_num, const in
             max_n = fmaxf(fabs(in_complex[i][j][0]), max_n);
         }
     }
+
     for (int i = 0; i < blocks_num; ++i) {
         for (int j = 0; j < block_size; ++j) {
             in_complex[i][j][0] /= max_n;
@@ -57,7 +65,11 @@ void process_ping_guilbert(const data_type* data, const int blocks_num, const in
                 break;
             }
         }
+    }
+    fftw3_plan_locker.lock();
+    for (int i = 0; i < blocks_num; ++i) {
         fftw_destroy_plan(plan[i]);
         fftw_destroy_plan(plan_inv[i]);
     }
+    fftw3_plan_locker.unlock();
 }

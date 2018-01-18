@@ -35,7 +35,7 @@ private:
     {
         double speed_of_sound = 1468.5;
         // I don't know why 1000000
-        int shift = std::min(int(1'000'000*dist/speed_of_sound), block_size);
+        int shift = std::min(std::max(int(1'000'000*dist/speed_of_sound), 0), block_size);
         std::cout << shift << std::endl;
         std::fill(begin, begin + shift, 0);
         std::copy(data.begin(), data.end() - shift, begin + shift);

@@ -1,42 +1,91 @@
-// nginx redirects /sv -> host:8000 (see README/nginx.conf)
-const fastcgiAddress = "/sv";
-// 1/nanosecond
-const invNs = 1e8;
-const speedOfSound = 1500;
-
-// __________________________
-// | chart00 | chart01 | ...
-// | chart10 | chart11 | ...
-// | chart20 | chart21 | ...
-// |   ...   |   ...   | ...
-const chartContainerPrefix = 'chart';
-
-// use host?<transposedGetParameter>=1
-// to see transposed table:
-// ___________________________________
-// | chart00 | chart10 | chart20 | ...
-// | chart01 | chart11 | chart21 | ...
-// |   ...   |   ...   |   ...   | ...
-const transposedGetParameter = 'transposed';
-
-// Array of canvasjs library objects
-let plots = {};
-
-let isFirstLoad = true;
-
-// Needed to stop polling by interval
-let intervalHandler = 0;
-
-// Needed to restore size of charts
-let defaultChartWidth = 0;
-let defaultChartHeight = 0;
-let simulatorPanelEnabled = 0;
-
-let chartRows = 0;
-let chartCols = 0;
-
 $(document).ready(function() {
+    // nginx redirects /sv -> host:8000 (see README/nginx.conf)
+    const fastcgiAddress = "/sv";
+    // 1/nanosecond
+    const invNs = 1e8;
+    const speedOfSound = 1500;
+
+    let requetstId = 0;
+
+    // __________________________
+    // | chart00 | chart01 | ...
+    // | chart10 | chart11 | ...
+    // | chart20 | chart21 | ...
+    // |   ...   |   ...   | ...
+    const chartContainerPrefix = 'chart';
+
+    // use host?<transposedGetParameter>=1
+    // to see transposed table:
+    // ___________________________________
+    // | chart00 | chart10 | chart20 | ...
+    // | chart01 | chart11 | chart21 | ...
+    // |   ...   |   ...   |   ...   | ...
+    const transposedGetParameter = 'transposed';
+
+    // Array of canvasjs library objects
+    let plots = {};
+
+    let isFirstLoad = true;
+
+    // Needed to stop polling by interval
+    let intervalHandler = 0;
+
+    // Needed to restore size of charts
+    let defaultChartWidth = 0;
+    let defaultChartHeight = 0;
+
+    let chartRows = 0;
+    let chartCols = 0;
+
+    let modes = {};
+    let savedValues = {};
+
+    function registerMode(properties) {
+        let name = properties.name;
+        let value = $("select[id=modeSelector] option").length;
+        let option = $('<option>').attr('value', value).html(name);
+        $('#modeSelector').append(option);
+        modes[value] = properties;
+    }
+
+    function inputChanged() {
+        $("#setButton").html("Set*");
+    }
+
+    function applyMode(modeValue) {
+        $('#simulatorControls').empty();
+        properties = modes[modeValue];
+        let name = properties.name;
+        properties = properties.props;
+        for (var i = 0; i < properties.length; i++) {
+            let row = $('<tr>');
+            row.append($('<td>').html(properties[i].caption));
+            let td = $('<td>');
+            let input = $('<' + properties[i].tag + '>').attr("id", properties[i].id);
+            for (let j = 0; j < properties[i].attrs.length; j++) {
+                if (properties[i].attrs[j][0] == "value" && properties[i].id in savedValues) {
+                    input.attr(properties[i].attrs[j][0], savedValues[properties[i].id]);
+                } else {
+                    input.attr(properties[i].attrs[j][0], properties[i].attrs[j][1]);
+                }
+            }
+            input.on('change', inputChanged);
+            td.append(input);
+            row.append(td);
+            $('#simulatorControls').append(row);
+        }
+    }
+
+    $('#modeSelector').on('change', function(event) {
+        applyMode($("select#modeSelector").val());
+    });
+
+    function semicolonToAry(text) {
+        return text.split(';').map(Number);
+    }
+
     $("#pingButton").click(function() {
+        $("#pingButton").html("Ping*");
         updateContents();
     });
 
@@ -65,7 +114,7 @@ $(document).ready(function() {
                 let td = $('<td>').attr('class', 'resizabletd').append(
                     $('<div>').attr('class', 'resizableDiv').attr('id', containerName)
                 );
-                row.append(td);         
+                row.append(td);
             }
             $('#chartsTable').append(row);
         }
@@ -101,51 +150,36 @@ $(document).ready(function() {
     }
 
     function updateContents() {
-        // Read coordinates of receivers
-        let a1 = document.getElementById('a1Coord').value.split(';');
-        let a2 = document.getElementById('a2Coord').value.split(';');
-        let a3 = document.getElementById('a3Coord').value.split(';');
-        let a4 = document.getElementById('a4Coord').value.split(';');
+        let mode = modes[$("select#modeSelector").val()];
+        let postData = {
+            mode: Number($("select#modeSelector").val()),
+            slice: semicolonToAry(document.getElementById('slice').value),
+            requetstId: ++requetstId
+        };
+        if (modes[$("select#modeSelector").val()].name == "serv_sim") {
+            for (var i = 0; i < mode.props.length; i++) {
+                let value = document.getElementById(mode.props[i].id).value;
+                postData[mode.props[i].id] = mode.props[i].transform(value);
+            }
+        }
+        // let pc = ("0;0;0").split(';');
+        // let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
+        // let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
+        // let d3 = Math.sqrt((pc[0] - a3[0])**2 + (pc[1] - a3[1])**2 + (pc[2] - a3[2])**2);
+        // let d4 = Math.sqrt((pc[0] - a4[0])**2 + (pc[1] - a4[1])**2 + (pc[2] - a4[2])**2);
 
-        let pc = ("0;0;0").split(';');
-        let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
-        let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
-        let d3 = Math.sqrt((pc[0] - a3[0])**2 + (pc[1] - a3[1])**2 + (pc[2] - a3[2])**2);
-        let d4 = Math.sqrt((pc[0] - a4[0])**2 + (pc[1] - a4[1])**2 + (pc[2] - a4[2])**2);
-        // let dMin = Math.min(d1, d2, d3, d4);
-        // let l1 = Math.floor((d1 - dMin)/speedOfSound*invNs);
-
-        let slice = document.getElementById('slice').value.split(';');
-        let sliceBeg = Number(slice[0]);
-        let sliceEnd = Number(slice[1]);
-        let threshold = Number(document.getElementById('threshold').value);
-        let frequency = Number(document.getElementById('frequency').value);
-        let pulseLen = Number(document.getElementById('pulseLen').value);
-        let amplitude = Number(document.getElementById('amplitude').value);
-        let sampleRate = Number(document.getElementById('sampleRate').value);
-
-        // Post-query to server is space separated array of parameters for signal simulator
-        let postData = JSON.stringify({
-            isSimulatorTest: simulatorPanelEnabled, 
-            d1: d1, 
-            d2: d2, 
-            d3: d3, 
-            d4: d4, 
-            sliceBeg: sliceBeg, 
-            sliceEnd: sliceEnd, 
-            threshold: threshold, 
-            frequency: frequency, 
-            pulseLen: pulseLen, 
-            amplitude: amplitude, 
-            sampleRate: sampleRate
-        });
+        postData = JSON.stringify(postData);
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
             data: postData,
             success: function(response) {
+                $("#pingButton").html("Ping");
                 response = JSON.parse(response);
-                document.getElementById('delays').innerHTML = response.delays;
+                if (Object.getOwnPropertyNames(response).length == 1) {
+                    return;
+                }
+                document.getElementById('calculatedDelays').innerHTML = response.delays;
                 chartRows = response.data.length;
                 chartCols = 2;
 
@@ -181,12 +215,6 @@ $(document).ready(function() {
         }
     }
 
-    // Executes when the page loads
-    $(window).on("load", function(e) {
-        updateInterval();
-        $(document.getElementById("simulatorControls")).hide();
-    });
-
     function resizeCharts() {
         let props = Object.getOwnPropertyNames(plots);
         for (let i = 0; i < props.length; i++) {
@@ -206,10 +234,33 @@ $(document).ready(function() {
         updateInterval();
     }); 
 
+    $("#setButton").click(function() {
+        $("#setButton").html("Set**");
+        let mode = modes[$("select#modeSelector").val()];
+        let postData = {
+            mode: Number($("select#modeSelector").val()),
+            slice: semicolonToAry(document.getElementById('slice').value),
+            is_setup: 1,
+            requetstId: ++requetstId
+        };
+        for (var i = 0; i < mode.props.length; i++) {
+            postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
+            savedValues[mode.props[i].id] = document.getElementById(mode.props[i].id).value;
+        }
+        postData = JSON.stringify(postData);
+        $.ajax({
+            url: fastcgiAddress,
+            type: "POST",
+            data: postData,
+            success: function(response) {
+                $("#setButton").html("Set");
+            }
+        });
+    });
+
     // Hide and show controls panel
     function toggleSimulatorControls() {
-        $(document.getElementById("simulatorControls")).toggle();
-        simulatorPanelEnabled = $("#simulatorControls").is(":visible") ? 1 : 0;
+        $(document.getElementById("simulatorControlsDiv")).toggle();
     }
 
     $("#toggleSimulatorControls").click(function() {
@@ -226,5 +277,148 @@ $(document).ready(function() {
             }
         }
         resizeCharts();
-    }); 
+    });
+
+    function init() {
+        console.log("indoc");
+        updateInterval();
+        $(document.getElementById("simulatorControlsDiv")).hide();
+        registerMode({
+            name: "fpga_sim",
+            props: [
+                {
+                    tag: "input",
+                    caption: "Simulation frequency (Hz)",
+                    id: "simFrequency",
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "FFT threshold",
+                    id: "fftThreshold",
+                    attrs: [["type", "number"], ["value", "0"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Hilbert threshold",
+                    id: "hilbertThreshold",
+                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Frequency (Hz)",
+                    id: "frequency",
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Delays",
+                    id: "delays",
+                    attrs: [["type", "text"], ["value", "0;0;0;0"]],
+                    transform: semicolonToAry
+                }
+            ]
+        });
+        registerMode({
+            name: "serv_sim",
+            props: [
+                {
+                    tag: "input",
+                    caption: "Sample rate",
+                    id: "sampleRate",
+                    attrs: [["type", "number"], ["value", "150000"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Hilbert threshold",
+                    id: "hilbertThreshold",
+                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Simulation frequency (Hz)",
+                    id: "simFrequency",
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Pulse length",
+                    id: "pulseLen",
+                    attrs: [["type", "number"], ["value", "1"], ["min", "1"], ["max", "12"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Amplitude",
+                    id: "amplitude",
+                    attrs: [["type", "number"], ["value", "100"], ["min", "1"], ["max", "20000"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "A1",
+                    id: "a1Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                },
+                {
+                    tag: "input",
+                    caption: "A2",
+                    id: "a2Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                },
+                {
+                    tag: "input",
+                    caption: "A3",
+                    id: "a3Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                },
+                {
+                    tag: "input",
+                    caption: "A4",
+                    id: "a4Coord",
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
+                    transform: semicolonToAry
+                }
+            ]
+        });
+        registerMode({
+            name: "real_mode",
+            props: [
+                {
+                    tag: "input",
+                    caption: "FFT threshold",
+                    id: "fftThreshold",
+                    attrs: [["type", "number"], ["value", "0"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Hilbert threshold",
+                    id: "hilbertThreshold",
+                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
+                    transform: Number
+                },
+                {
+                    tag: "input",
+                    caption: "Frequency (Hz)",
+                    id: "frequency",
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"]],
+                    transform: Number
+                }
+            ]
+        });
+        applyMode($("select#modeSelector").val());
+    }
+    
+    init();
 });
