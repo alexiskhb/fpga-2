@@ -25,7 +25,6 @@ module pinger_simulator (
     reg [31:0] ping_time;
 
 
-
     reg [31:0] wait_time_param;
     reg [31:0] ping_time_param;
     reg [31:0] nco_phase_inc_param;
@@ -34,6 +33,8 @@ module pinger_simulator (
 
     parameter WAIT_TIME      = 32'd99000000
             , PING_TIME      = 32'd1000000
+            , PHASE_INC      = 32'd1288490 //30kHz
+
             , WAIT           = 8'd0
             , DELAY_AND_PING = 8'd1
 
@@ -48,14 +49,14 @@ module pinger_simulator (
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
-            wait_time_param <= 32'd99000000;
-            wait_time_time <= 32'd1000000;
-            nco_phase_inc_param <= 32'd1288490;
-            pingers_delay_param[0] <= 32'd1000;
+            wait_time_param <= WAIT_TIME;
+            ping_time_param <= PING_TIME;
+            nco_phase_inc_param <= PHASE_INC;
+            pingers_delay_param[0] <= 32'd0;
             pingers_delay_param[1] <= 32'd0;
-            pingers_delay_param[2] <= 32'd3000;
+            pingers_delay_param[2] <= 32'd0;
         end else begin
-            case (pinger_param_channel):
+            case (pinger_param_channel)
                 MEM_SIM_WAIT_TIME:
                     begin
                         if (wait_time_param != pinger_param_data) begin
@@ -101,7 +102,7 @@ module pinger_simulator (
         if (reset) begin
             wait_counter <= 32'd0;
         end else begin
-            if (wait_counter < WAIT_TIME) begin
+            if (wait_counter < wait_time) begin
                 wait_counter <= wait_counter + 1;
             end else begin
                 wait_counter <= 32'd0;
@@ -116,20 +117,25 @@ module pinger_simulator (
             pingers_were_active <= 3'd0;
             pingers_valid <= 3'd0;
             state <= WAIT;
-            pingers_delay[0] <= 32'd1000;
+            pingers_delay[0] <= 32'd0;
             pingers_delay[1] <= 32'd0;
-            pingers_delay[2] <= 32'd3000;
-            nco_phase_inc <= 32'd1288490; //30kHz
+            pingers_delay[2] <= 32'd0;
+            wait_time <= WAIT_TIME;
+            ping_time <= PING_TIME;
+            nco_phase_inc <= PHASE_INC;
         end else begin
             case (state)
                 WAIT:
-                    pingers_delay[0] <= pingers_delay_param[0];
-                    pingers_delay[1] <= pingers_delay_param[1];
-                    pingers_delay[2] <= pingers_delay_param[2];
-                    wait_time <= wait_time_param;
-                    nco_phase_inc <= nco_phase_inc_param; //30kHz
-                    if (wait_counter >= WAIT_TIME) begin
-                        state <= DELAY_AND_PING;
+                    begin
+                        pingers_delay[0] <= pingers_delay_param[0];
+                        pingers_delay[1] <= pingers_delay_param[1];
+                        pingers_delay[2] <= pingers_delay_param[2];
+                        wait_time <= wait_time_param;
+                        ping_time <= ping_time_param;
+                        nco_phase_inc <= nco_phase_inc_param;
+                        if (wait_counter >= wait_time) begin
+                            state <= DELAY_AND_PING;
+                        end
                     end
                 DELAY_AND_PING:
                     begin
@@ -139,19 +145,19 @@ module pinger_simulator (
                             state <= WAIT;
                         end else begin
                             delay_counter <= delay_counter + 1;
-                            if (delay_counter >= pingers_delay[0] && delay_counter < pingers_delay[0] + PING_TIME) begin
+                            if (delay_counter >= pingers_delay[0] && delay_counter < pingers_delay[0] + ping_time) begin
                                 pingers_valid[0] <= 1'b1;
                                 pingers_were_active[0] <= 1'b1;
                             end else begin
                                 pingers_valid[0] <= 1'b0;
                             end
-                            if (delay_counter >= pingers_delay[1] && delay_counter < pingers_delay[1] + PING_TIME) begin
+                            if (delay_counter >= pingers_delay[1] && delay_counter < pingers_delay[1] + ping_time) begin
                                 pingers_valid[1] <= 1'b1;
                                 pingers_were_active[1] <= 1'b1;
                             end else begin
                                 pingers_valid[1] <= 1'b0;
                             end
-                            if (delay_counter >= pingers_delay[2] && delay_counter < pingers_delay[2] + PING_TIME) begin
+                            if (delay_counter >= pingers_delay[2] && delay_counter < pingers_delay[2] + ping_time) begin
                                 pingers_valid[2] <= 1'b1;
                                 pingers_were_active[2] <= 1'b1;
                             end else begin
@@ -182,7 +188,6 @@ module pinger_simulator (
     begin
         if (reset) begin
             adc_value <= 16'd0;
-            // nco_phase_inc <= 32'd1288490; //30kHz
         end else begin
             if (pingers_valid[current_channel - 1] == 1'b1) begin
                 if  (nco_sin_out[11] == 1'b1) begin

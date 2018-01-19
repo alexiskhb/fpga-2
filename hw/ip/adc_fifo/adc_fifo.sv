@@ -122,7 +122,7 @@ module adc_fifo (
             , FFT_SIZE  = 32'd256
             , FFT_HALF_SIZE  = 32'd128
             , MEAN_SIZE = 32'd16
-            , WAIT_DELAY = 32'd2000;
+            , WAIT_DELAY = 32'd6300000
 
             , MEM_FREQ = 8'd0
             , MEM_TRESHOLD = 8'd4
@@ -238,7 +238,7 @@ module adc_fifo (
             cntr_wait <= 0;
         end else begin
             if (cntr_wait <= WAIT_DELAY && state == WAIT_END) begin
-                cntr_cntr <= cntr_wait + 1;
+                cntr_wait <= cntr_wait + 1;
             end else begin
                 cntr_wait <= 0;
             end
@@ -273,7 +273,6 @@ module adc_fifo (
                             index_fft <= freq_param;
                             module_fft <= module_param;
                             fft_good <= 3'd0;
-                            simulation <= simulation_param;
                             reset_changed_param <= 1;
                         end else begin
                             reset_changed_param <= 0;
@@ -526,13 +525,13 @@ module adc_fifo (
             if (slave_chipselect) begin
                 if (slave_write) begin
                     case(slave_address)
-                        MEMO_FREQ:
+                        MEM_FREQ:
                             begin
                                 freq_param <= slave_writedata[31:16];
                                 module_param <= slave_writedata[15:0];
                                 changed_param <= 1;
                             end
-                        MEMO_TRESHOLD:
+                        MEM_TRESHOLD:
                             begin
                                 treshold_param <= slave_writedata[15:0];
                                 changed_param <= 1;
