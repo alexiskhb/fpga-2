@@ -90,7 +90,7 @@ private:
     };
     double post_d1, post_d2, post_d3, post_d4, post_hilbert_threshold;
     int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_fft_threshold;
-    int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0;
+    int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0, post_pulse_rep;
     std::vector<int> post_delays;
 private:
     template <class T>
@@ -131,6 +131,7 @@ private:
             {post_fft_threshold, "fftThreshold"},
             {post_is_setup, "is_setup"},
             {post_sim_frequency, "simFrequency"},
+            {post_pulse_rep, "pulseRep"},
         });
         read_json<std::vector<int>>(post, {
             {v, "slice"},
