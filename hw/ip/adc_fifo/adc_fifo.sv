@@ -77,7 +77,11 @@ module adc_fifo (
         input  wire                slave_chipselect,
 
         output reg                 pinger_sim_next_channel,
-        input wire         [15:0]  pinger_sim_value
+        input wire         [15:0]  pinger_sim_value,
+
+
+        output reg         [7:0]   pinger_param_channel,
+        output reg         [31:0]  pinger_param_data
 
     );
 
@@ -111,15 +115,26 @@ module adc_fifo (
             , FFT_END = 8'd16
             , DOWN_START = 8'd17
             , DOWN_START_2 = 8'd18
+            , WAIT_END = 8'd19
 
             , DMA_EVENT = 32'd123
             , SIZE_FIFO = 32'd3072
             , FFT_SIZE  = 32'd256
             , FFT_HALF_SIZE  = 32'd128
             , MEAN_SIZE = 32'd16
+            , WAIT_DELAY = 32'd2000;
 
-            , MEMORY_FREQ = 8'h00
-            , MEMORY_TRESHOLD = 8'h04;
+            , MEM_FREQ = 8'd0
+            , MEM_TRESHOLD = 8'd4
+
+            , MEM_SIM_DELAY_1 = 8'd8
+            , MEM_SIM_DELAY_2 = 8'd12
+            , MEM_SIM_DELAY_3 = 8'd16
+            , MEM_SIM_PHASE_INC = 8'd20
+            , MEM_SIM_FLAG = 8'd24
+            , MEM_SIM_PING_TIME = 8'd28
+            , MEM_SIM_WAIT_TIME = 8'd32;
+            
 
     always @ (posedge clk or posedge reset)
     begin
@@ -149,21 +164,6 @@ module adc_fifo (
 
     wire dma_event;
     assign dma_event = (dsp_ss_valid == 1'b1 && dsp_ss_data == DMA_EVENT) ? 1'b1 : 1'b0;
-
-    // reg align_event;
-
-    // always @ (posedge clk or posedge reset)
-    // begin
-    //     if (reset) begin
-    //         align_event <= 1'b0;
-    //     end else begin
-    //         if (align_event == 0 && dma_event == 1) begin
-    //             align_event <= 1'b1;
-    //         end else if (state == END) begin
-    //             align_event <= 1'b0;
-    //         end
-    //     end
-    // end
 
     reg [2:0] adc_prev_channel;
     reg [31:0]  in_cntr [2:0];
@@ -198,6 +198,7 @@ module adc_fifo (
     reg [31:0] fft_tmp_imag;
     
     reg [31:0] mean_cntr;
+    reg [31:0] cntr_wait;
 
     reg        state_setup_flag;
     reg        changed_param;
@@ -234,6 +235,19 @@ module adc_fifo (
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
+            cntr_wait <= 0;
+        end else begin
+            if (cntr_wait <= WAIT_DELAY && state == WAIT_END) begin
+                cntr_cntr <= cntr_wait + 1;
+            end else begin
+                cntr_wait <= 0;
+            end
+        end
+    end
+
+    always @ (posedge clk or posedge reset)
+    begin
+        if (reset) begin
             state_fft <= WAIT;
             mean_sum <= 0;
             fft_good <= 3'd0;
@@ -259,6 +273,7 @@ module adc_fifo (
                             index_fft <= freq_param;
                             module_fft <= module_param;
                             fft_good <= 3'd0;
+                            simulation <= simulation_param;
                             reset_changed_param <= 1;
                         end else begin
                             reset_changed_param <= 0;
@@ -391,7 +406,6 @@ module adc_fifo (
             index[0]                        <= 2;
             index[1]                        <= 0;
             index[2]                        <= 1;
-            simulation                      <= 1;
             pinger_sim_next_channel         <= 1'b0;
         end else begin
             adc_prev_channel <= adc_channel;    
@@ -485,7 +499,13 @@ module adc_fifo (
                         in_cntr[2] <= 32'd0;
                         pause_cntr <= 0;
                         adc_prev_channel <= 0;
-                        state <= FILL;
+                        state <= WAIT_END;
+                    end
+                WAIT_END:
+                    begin
+                        if (cntr_wait > WAIT_DELAY) begin
+                            state <= FILL;
+                        end
                     end
             endcase
         end
@@ -498,23 +518,58 @@ module adc_fifo (
             module_param <= 0;
             treshold_param <= 10;
             changed_param <= 0;
-        end else begin
+            simulation <= 0;
+        end else begin            
             if (reset_changed_param == 1) begin
                 changed_param <= 0;
             end else 
             if (slave_chipselect) begin
                 if (slave_write) begin
                     case(slave_address)
-                        MEMORY_FREQ:
+                        MEMO_FREQ:
                             begin
                                 freq_param <= slave_writedata[31:16];
                                 module_param <= slave_writedata[15:0];
                                 changed_param <= 1;
                             end
-                        MEMORY_TRESHOLD:
+                        MEMO_TRESHOLD:
                             begin
                                 treshold_param <= slave_writedata[15:0];
                                 changed_param <= 1;
+                            end
+                        MEM_SIM_FLAG:
+                            begin
+                                simulation <= slave_writedata[0];
+                            end
+                        MEM_SIM_DELAY_1:
+                            begin
+                                pinger_param_channel <= MEM_SIM_DELAY_1;
+                                pinger_param_data <= slave_writedata;
+                            end
+                        MEM_SIM_DELAY_2:
+                            begin
+                                pinger_param_channel <= MEM_SIM_DELAY_2;
+                                pinger_param_data <= slave_writedata; 
+                            end
+                        MEM_SIM_DELAY_3:
+                            begin
+                                pinger_param_channel <= MEM_SIM_DELAY_3;
+                                pinger_param_data <= slave_writedata;
+                            end
+                        MEM_SIM_PHASE_INC:
+                            begin
+                                pinger_param_channel <= MEM_SIM_PHASE_INC;
+                                pinger_param_data <= slave_writedata; 
+                            end
+                        MEM_SIM_PING_TIME:
+                            begin
+                                pinger_param_channel <= MEM_SIM_PING_TIME;
+                                pinger_param_data <= slave_writedata; 
+                            end
+                        MEM_SIM_WAIT_TIME:
+                            begin
+                                pinger_param_channel <= MEM_SIM_WAIT_TIME;
+                                pinger_param_data <= slave_writedata;
                             end
                     endcase
                 end

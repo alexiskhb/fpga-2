@@ -629,6 +629,30 @@
          type = "String";
       }
    }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element soc_system
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element sqrt_0
    {
       datum _sortIndex
@@ -1834,6 +1858,11 @@
    version="17.1"
    start="pinger_simulator_0.avalon_ss_out"
    end="adc_fifo.avalon_ss_pinger_sim_in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="adc_fifo.avalon_ss_pinger_param"
+   end="pinger_simulator_0.avalon_ss_pinger_param" />
  <connection
    kind="avalon_streaming"
    version="17.1"
