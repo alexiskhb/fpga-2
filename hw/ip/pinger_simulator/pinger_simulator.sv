@@ -172,7 +172,7 @@ module pinger_simulator (
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
-            current_channel <= 3'd1;
+            current_channel <= 3'd0;
         end else begin
             if (next_channel == 1'b1) begin
                 if (current_channel == 3'd3) begin

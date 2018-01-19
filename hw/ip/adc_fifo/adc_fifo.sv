@@ -205,6 +205,7 @@ module adc_fifo (
     reg        reset_changed_param;
 
     reg        simulation;
+    reg        pinger_sim_next_channel_changed;
 
     always @ (posedge clk or posedge reset)
     begin
@@ -382,7 +383,6 @@ module adc_fifo (
                                 fft_good[current_index] <= 1'b0;
                             end
                             state_fft <= WAIT;
-                            // state_fft <= FFT_END;
                         end
                     end
             endcase            
@@ -405,7 +405,6 @@ module adc_fifo (
             index[0]                        <= 2;
             index[1]                        <= 0;
             index[2]                        <= 1;
-            pinger_sim_next_channel         <= 1'b0;
         end else begin
             adc_prev_channel <= adc_channel;    
             if (state_fft == FFT_OUT1) begin
@@ -419,7 +418,6 @@ module adc_fifo (
                         fifo_in_valid <= 1'b1;
                         if (simulation == 1) begin
                             fifo_in_data <= pinger_sim_value;
-                            pinger_sim_next_channel <= 1'b1;
                         end else begin
                             fifo_in_data <= adc_data;
                         end
@@ -452,7 +450,6 @@ module adc_fifo (
                         if (simulation == 1) begin
                             data_cntrl_data <= pinger_sim_value;                        
                             fifo_in_data <= pinger_sim_value;
-                            pinger_sim_next_channel <= 1;
                         end else begin
                             data_cntrl_data <= adc_data;                        
                             fifo_in_data <= adc_data;
@@ -483,7 +480,6 @@ module adc_fifo (
                     begin
                         data_cntrl_valid <= 1'b0;
                         fifo_in_valid <= 1'b0;
-                        pinger_sim_next_channel <= 1'b0;
                         if (pause_cntr >= 4'd7) begin
                             pause_cntr <= 4'd0;
                             state <= state_after_pause;
@@ -507,6 +503,24 @@ module adc_fifo (
                         end
                     end
             endcase
+        end
+    end
+
+    always @ (posedge clk or posedge reset)
+    begin
+        if(reset) begin
+            pinger_sim_next_channel <= 1'b0;
+            pinger_sim_next_channel_changed <= 1'b0;
+        end else begin
+            if (adc_valid == 1'b1 && pinger_sim_next_channel_changed == 1'b0) begin
+                pinger_sim_next_channel <= 1'b1;
+                pinger_sim_next_channel_changed <= 1'b1;
+            end else begin
+                pinger_sim_next_channel <= 1'b0;
+                if (adc_valid == 1'b0) begin
+                    pinger_sim_next_channel_changed <= 1'b0;
+                end
+            end
         end
     end
 
