@@ -38,7 +38,6 @@ $(document).ready(function() {
     let chartCols = 0;
 
     let modes = {};
-    let savedValues = {};
 
     function registerMode(properties) {
         let name = properties.name;
@@ -63,13 +62,14 @@ $(document).ready(function() {
             let td = $('<td>');
             let input = $('<' + properties[i].tag + '>').attr("id", properties[i].id);
             for (let j = 0; j < properties[i].attrs.length; j++) {
-                if (properties[i].attrs[j][0] == "value" && properties[i].id in savedValues) {
-                    input.attr(properties[i].attrs[j][0], savedValues[properties[i].id]);
+                if (properties[i].attrs[j][0] == "value" && $.cookie(properties[i].id)) {
+                    input.attr(properties[i].attrs[j][0], $.cookie(properties[i].id));
                 } else {
                     input.attr(properties[i].attrs[j][0], properties[i].attrs[j][1]);
                 }
             }
             input.on('change', inputChanged);
+            input.keypress(inputChanged);
             td.append(input);
             row.append(td);
             $('#simulatorControls').append(row);
@@ -245,7 +245,9 @@ $(document).ready(function() {
         };
         for (var i = 0; i < mode.props.length; i++) {
             postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
-            savedValues[mode.props[i].id] = document.getElementById(mode.props[i].id).value;
+            $.cookie(mode.props[i].id, document.getElementById(mode.props[i].id).value, {
+                expires: 30
+            });
         }
         postData = JSON.stringify(postData);
         $.ajax({
@@ -318,7 +320,7 @@ $(document).ready(function() {
                     tag: "input",
                     caption: "Delays",
                     id: "delays",
-                    attrs: [["type", "text"], ["value", "0;0;0;0"]],
+                    attrs: [["type", "text"], ["value", "0;0;0"]],
                     transform: semicolonToAry
                 }
             ]
