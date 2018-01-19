@@ -19,8 +19,8 @@ module pinger_simulator (
     reg [3:0]  current_channel;
     reg [7:0]  state;
 
-    parameter WAIT_TIME      = 32'd1000//32'd99000000
-            , PING_TIME      = 32'd10000//32'd1000000
+    parameter WAIT_TIME      = 32'd99000000
+            , PING_TIME      = 32'd1000000
             , WAIT           = 8'd0
             , DELAY_AND_PING = 8'd1;
 
@@ -88,7 +88,7 @@ module pinger_simulator (
     always @ (posedge clk or posedge reset)
     begin
         if (reset) begin
-            current_channel <= 3'd2;
+            current_channel <= 3'd1;
         end else begin
             if (next_channel == 1'b1) begin
                 if (current_channel == 3'd3) begin

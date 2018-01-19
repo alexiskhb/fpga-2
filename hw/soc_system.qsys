@@ -189,6 +189,14 @@
          type = "String";
       }
    }
+   element my_nco_0
+   {
+      datum _sortIndex
+      {
+         value = "19";
+         type = "int";
+      }
+   }
    element onchip_memory2_0
    {
       datum _sortIndex
@@ -203,6 +211,14 @@
       {
          value = "0";
          type = "String";
+      }
+   }
+   element pinger_simulator_0
+   {
+      datum _sortIndex
+      {
+         value = "20";
+         type = "int";
       }
    }
    element pll_0
@@ -1374,6 +1390,7 @@
   <parameter name="writeBufferDepth" value="64" />
   <parameter name="writeIRQThreshold" value="8" />
  </module>
+ <module name="my_nco_0" kind="my_nco" version="1.0" enabled="1" />
  <module
    name="onchip_memory2_0"
    kind="altera_avalon_onchip_memory2"
@@ -1406,6 +1423,11 @@
   <parameter name="useShallowMemBlocks" value="false" />
   <parameter name="writable" value="true" />
  </module>
+ <module
+   name="pinger_simulator_0"
+   kind="pinger_simulator"
+   version="1.0"
+   enabled="1" />
  <module name="pll_0" kind="altera_pll" version="17.1" enabled="1">
   <parameter name="debug_print_output" value="false" />
   <parameter name="debug_use_rbc_taf_method" value="false" />
@@ -1805,6 +1827,16 @@
  <connection
    kind="avalon_streaming"
    version="17.1"
+   start="pinger_simulator_0.avalon_ss_nco_in"
+   end="my_nco_0.avalon_streaming_sink" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="pinger_simulator_0.avalon_ss_out"
+   end="adc_fifo.avalon_ss_pinger_sim_in" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
    start="adc_fifo.avalon_ss_sqrt_in"
    end="sqrt_0.avalon_streaming_sink" />
  <connection
@@ -1812,6 +1844,11 @@
    version="17.1"
    start="adc.avalon_streaming_source"
    end="adc_fifo.avalon_ss_adc" />
+ <connection
+   kind="avalon_streaming"
+   version="17.1"
+   start="my_nco_0.avalon_streaming_source"
+   end="pinger_simulator_0.avalon_ss_nco_out" />
  <connection
    kind="avalon_streaming"
    version="17.1"
@@ -1928,6 +1965,16 @@
    version="17.1"
    start="pll_0.outclk2"
    end="data_controller_0.clock_sink" />
+ <connection
+   kind="clock"
+   version="17.1"
+   start="pll_0.outclk2"
+   end="my_nco_0.clock_sink" />
+ <connection
+   kind="clock"
+   version="17.1"
+   start="pll_0.outclk2"
+   end="pinger_simulator_0.clock_sink" />
  <connection
    kind="clock"
    version="17.1"
@@ -2053,6 +2100,16 @@
    version="17.1"
    start="clk_0.clk_reset"
    end="data_controller_0.reset_sink" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="my_nco_0.reset_sink" />
+ <connection
+   kind="reset"
+   version="17.1"
+   start="clk_0.clk_reset"
+   end="pinger_simulator_0.reset_sink" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
 </system>

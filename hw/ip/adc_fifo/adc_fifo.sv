@@ -74,7 +74,10 @@ module adc_fifo (
         output reg         [31:0]  slave_readdata,
         input  wire                slave_write,
         input  wire        [31:0]  slave_writedata,
-        input  wire                slave_chipselect
+        input  wire                slave_chipselect,
+
+        output reg                 pinger_sim_next_channel,
+        input wire         [15:0]  pinger_sim_value
 
     );
 
@@ -199,6 +202,8 @@ module adc_fifo (
     reg        state_setup_flag;
     reg        changed_param;
     reg        reset_changed_param;
+
+    reg        simulation;
 
     always @ (posedge clk or posedge reset)
     begin
@@ -386,6 +391,8 @@ module adc_fifo (
             index[0]                        <= 2;
             index[1]                        <= 0;
             index[2]                        <= 1;
+            simulation                      <= 1;
+            pinger_sim_next_channel         <= 1'b0;
         end else begin
             adc_prev_channel <= adc_channel;    
             if (state_fft == FFT_OUT1) begin
@@ -396,12 +403,13 @@ module adc_fifo (
                     if (cntr_in < SIZE_FIFO && adc_valid == 1'b0) begin
                         fifo_in_valid <= 1'b0;
                     end else if (cntr_in < SIZE_FIFO && adc_valid == 1'b1) begin
-                        // in_cntr[index[adc_channel - 1]] <= in_cntr[index[adc_channel - 1]] + 1;
-                        // data_cntrl_channel <= index[adc_channel - 1];
-                        // data_cntrl_valid <= 1'b1;
-                        // data_cntrl_data <= adc_data;
                         fifo_in_valid <= 1'b1;
-                        fifo_in_data <= adc_data;
+                        if (simulation == 1) begin
+                            fifo_in_data <= pinger_sim_value;
+                            pinger_sim_next_channel <= 1'b1;
+                        end else begin
+                            fifo_in_data <= adc_data;
+                        end
                         state <= PAUSE;
                         state_after_pause <= FILL;
                     end else if (cntr_in >= SIZE_FIFO) begin
@@ -428,10 +436,16 @@ module adc_fifo (
                         in_cntr[index[adc_channel - 1]] <= in_cntr[index[adc_channel - 1]] + 1;
                         data_cntrl_channel <= index[adc_channel - 1];
                         data_cntrl_valid <= 1'b1;
-                        data_cntrl_data <= adc_data;
+                        if (simulation == 1) begin
+                            data_cntrl_data <= pinger_sim_value;                        
+                            fifo_in_data <= pinger_sim_value;
+                            pinger_sim_next_channel <= 1;
+                        end else begin
+                            data_cntrl_data <= adc_data;                        
+                            fifo_in_data <= adc_data;
+                        end
                         fifo_out_ready <= 1'b0;
                         fifo_in_valid <= 1'b1;
-                        fifo_in_data <= adc_data;
                         state <= PAUSE;
                         state_after_pause <= FULL;
                     end
@@ -456,6 +470,7 @@ module adc_fifo (
                     begin
                         data_cntrl_valid <= 1'b0;
                         fifo_in_valid <= 1'b0;
+                        pinger_sim_next_channel <= 1'b0;
                         if (pause_cntr >= 4'd7) begin
                             pause_cntr <= 4'd0;
                             state <= state_after_pause;
