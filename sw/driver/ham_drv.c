@@ -21,6 +21,14 @@
 #define MODULE_OFFSET                  (ham_drv_mem + 0x00050000)
 #define SET_FFT_FREQ_OFFSET            (MODULE_OFFSET)
 #define SET_THRESHOLD_OFFSET           (MODULE_OFFSET + 4)
+#define SET_SIM_DELAY_1_OFFSET         (MODULE_OFFSET + 8)
+#define SET_SIM_DELAY_2_OFFSET         (MODULE_OFFSET + 12)
+#define SET_SIM_DELAY_3_OFFSET         (MODULE_OFFSET + 16)
+#define SET_SIM_PHASE_INC_OFFSET       (MODULE_OFFSET + 20)
+#define SET_SIM_FLAG_OFFSET            (MODULE_OFFSET + 24)
+#define SET_SIM_PING_TIME_OFFSET       (MODULE_OFFSET + 28)
+#define SET_SIM_WAIT_TIME_OFFSET       (MODULE_OFFSET + 32)
+
 
 #define DMA_MODULE_OFFSET              (ham_drv_mem + 0x00000000)
 #define DMA_STATUS_REG_OFFSET          (DMA_MODULE_OFFSET)
@@ -147,6 +155,34 @@ static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long ar
         case IOCTL_SET_THRESHOLD:
             printk(KERN_INFO "ham_drv: ioctl threshold freq %lu\n", arg);
             iowrite32(arg, SET_THRESHOLD_OFFSET);
+            return 0;
+        case IOCTL_SET_SIM_DELAY_1:
+            printk(KERN_INFO "ham_drv: ioctl sim delay 1 %lu\n", arg);
+            iowrite32(arg, SET_SIM_DELAY_1_OFFSET);
+            return 0;
+        case IOCTL_SET_SIM_DELAY_2:
+            printk(KERN_INFO "ham_drv: ioctl sim delay 2 %lu\n", arg);
+            iowrite32(arg, SET_SIM_DELAY_2_OFFSET);
+            return 0;
+        case IOCTL_SET_SIM_DELAY_3:
+            printk(KERN_INFO "ham_drv: ioctl sim delay 3 %lu\n", arg);
+            iowrite32(arg, SET_SIM_DELAY_3_OFFSET);
+            return 0;
+        case IOCTL_SET_SIM_PHASE_INC:
+            printk(KERN_INFO "ham_drv: ioctl sim phase inc %lu\n", arg);
+            iowrite32(arg, SET_SIM_PHASE_INC_OFFSET);
+            return 0;
+        case IOCTL_SET_SIM_FLAG:
+            printk(KERN_INFO "ham_drv: ioctl sim flag %lu\n", arg);
+            iowrite32(arg, SET_SIM_FLAG_OFFSET);
+            return 0;
+        case IOCTL_SET_SIM_PING_TIME:
+            printk(KERN_INFO "ham_drv: ioctl sim ping time %lu\n", arg);
+            iowrite32(arg, SET_SIM_PING_TIME_OFFSET);
+            return 0;
+        case IOCTL_SET_SIM_WAIT_TIME:
+            printk(KERN_INFO "ham_drv: ioctl sim wait time %lu\n", arg);
+            iowrite32(arg, SET_SIM_WAIT_TIME_OFFSET);
             return 0;
         default:
             printk(KERN_ALERT "ham_drv: wrong ioctl command %d\n", cmd);

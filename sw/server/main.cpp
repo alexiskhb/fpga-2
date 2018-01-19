@@ -11,6 +11,7 @@
 #include <functional>
 #include <random>
 #include <mutex>
+#include <cmath>
 
 #include "processing.h"
 #include "pinger.h"
@@ -157,6 +158,16 @@ private:
                 freq = up_half | down_half;
                 driver.send(IOCTL_SET_FFT_FREQ, freq);
                 driver.send(IOCTL_SET_THRESHOLD, post_fft_threshold);
+                driver.send(IOCTL_SET_SIM_FLAG, (mode == fpga_sim_mode));
+            }
+            if (mode == fpga_sim_mode) {
+                driver.send(IOCTL_SET_SIM_DELAY_1, post_delays[0]);
+                driver.send(IOCTL_SET_SIM_DELAY_2, post_delays[1]);
+                driver.send(IOCTL_SET_SIM_DELAY_3, post_delays[2]);
+                double phase_inc = (double)post_sim_frequency / 100.0 * pow((double)2.0, 32) / 1e6 + 0.5; 
+                driver.send(IOCTL_SET_SIM_PHASE_INC, (unsigned int)(phase_inc));
+                driver.send(IOCTL_SET_SIM_PING_TIME, post_pulse_len * 100000);
+                driver.send(IOCTL_SET_SIM_WAIT_TIME, post_pulse_rep * 100000);
             }
         }
         std::cerr << "inProcessor ended" << std::endl;
