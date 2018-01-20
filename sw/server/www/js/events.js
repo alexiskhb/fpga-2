@@ -292,7 +292,7 @@ $(document).ready(function() {
                     tag: "input",
                     caption: "Simulation frequency (Hz)",
                     id: "simFrequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"], ["step", "100"]],
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
                     transform: Number
                 },
                 {
@@ -313,7 +313,7 @@ $(document).ready(function() {
                     tag: "input",
                     caption: "Frequency (Hz)",
                     id: "frequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"], ["step", "100"]],
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
                     transform: Number
                 },
                 {
@@ -360,21 +360,21 @@ $(document).ready(function() {
                     tag: "input",
                     caption: "Simulation frequency (Hz)",
                     id: "simFrequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"], ["step", "100"]],
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
                     transform: Number
                 },
                 {
                     tag: "input",
                     caption: "Pulse length",
                     id: "pulseLen",
-                    attrs: [["type", "number"], ["value", "1"], ["min", "1"], ["max", "12"]],
+                    attrs: [["type", "number"], ["value", "1"], ["min", "0"], ["max", "12"]],
                     transform: Number
                 },
                 {
                     tag: "input",
                     caption: "Amplitude",
                     id: "amplitude",
-                    attrs: [["type", "number"], ["value", "100"], ["min", "1"], ["max", "20000"]],
+                    attrs: [["type", "number"], ["value", "100"], ["min", "0"], ["max", "20000"]],
                     transform: Number
                 },
                 {
@@ -428,7 +428,7 @@ $(document).ready(function() {
                     tag: "input",
                     caption: "Frequency (Hz)",
                     id: "frequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "1"], ["step", "100"]],
+                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
                     transform: Number
                 }
             ]
