@@ -78,6 +78,7 @@ $(document).ready(function() {
 
     $('#modeSelector').on('change', function(event) {
         applyMode($("select#modeSelector").val());
+        $("#setButton").click();
     });
 
     function semicolonToAry(text) {
