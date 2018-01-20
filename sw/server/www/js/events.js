@@ -430,20 +430,6 @@ $(document).ready(function() {
                     id: "frequency",
                     attrs: [["type", "number"], ["value", "23000"], ["min", "1"], ["step", "100"]],
                     transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Pulse length (ms)",
-                    id: "pulseLen",
-                    attrs: [["type", "number"], ["value", "10"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Pulse repetition (ms)",
-                    id: "pulseRep",
-                    attrs: [["type", "number"], ["value", "1000"]],
-                    transform: Number
                 }
             ]
         });
