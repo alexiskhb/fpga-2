@@ -195,6 +195,12 @@ $(document).ready(function() {
                         type: "line",
                         dataPoints: response.data[i].map(toPointObjectCallback)
                     }];
+                    if ($('#showHilbert').is(":checked")) {
+                        plots[containerName0].chart.options.data.push({
+                            type: "line",
+                            dataPoints: response.hilbert[i].map(toPointObjectCallback)
+                        });
+                    }
                     plots[containerName0].chart.render();
                     
                     let containerName1 = (chartContainerPrefix + i) + '1';
