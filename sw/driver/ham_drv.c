@@ -199,7 +199,6 @@ static const struct file_operations ham_drv_fops = {
 
 static irqreturn_t ham_drv_interrupt_dma_complete(int irq, void *dev_id)
 {
-    printk(KERN_INFO "ham_drv: irq %d\n", irq);
     if (irq != INTERRUPT_DMA_COMPLETE) {
         return IRQ_NONE;
     }
@@ -212,7 +211,6 @@ static irqreturn_t ham_drv_interrupt_dma_complete(int irq, void *dev_id)
 
 static irqreturn_t ham_drv_interrupt_dma_ready(int irq, void *dev_id)
 {
-    printk(KERN_INFO "ham_drv: irq %d\n", irq);
     if (irq != INTERRUPT_DMA_READY) {
         return IRQ_NONE;
     }
