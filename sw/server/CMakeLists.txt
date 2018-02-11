@@ -8,6 +8,7 @@ add_definitions(--std=c++14 -pthread -Wall)
 
 set(BIN ${PROJECT_BINARY_DIR}/bin)
 
+include_directories(/usr/include)
 include_directories(/usr/local/include)
 
 set(TARGET_FILES main.cpp processing.cpp)

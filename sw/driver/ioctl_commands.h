@@ -7,3 +7,4 @@
 #define IOCTL_SET_SIM_FLAG         27
 #define IOCTL_SET_SIM_PING_TIME    28
 #define IOCTL_SET_SIM_WAIT_TIME    29
+#define IOCTL_SET_PID              30

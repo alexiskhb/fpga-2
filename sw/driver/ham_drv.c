@@ -8,7 +8,11 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/spinlock_types.h>
+#include <linux/sched.h>
+#include <linux/pid_namespace.h>
+#include <linux/pid.h>
 #include <asm/uaccess.h>
+#include <asm/siginfo.h>
 #include "ioctl_commands.h"
 
 #define DEVICE_NAME                    "ham"
@@ -16,6 +20,7 @@
 #define UINPUT_SIZE                    0x00070000
 #define INTERRUPT_DMA_COMPLETE         72
 #define INTERRUPT_DMA_READY            77
+#define SIG_DATA_READY                 55
 
 
 #define MODULE_OFFSET                  (ham_drv_mem + 0x00050000)
@@ -66,6 +71,8 @@ enum DmaRegisters
 static void *ham_drv_mem = NULL;
 static struct class *ham_drv_class  = NULL;
 static struct device *ham_drv_device = NULL;
+static struct siginfo signal_info;
+static struct task_struct *current_task = NULL;
 
 static int major_number;
 
@@ -74,6 +81,7 @@ static void *buffer;
 static DEFINE_SPINLOCK(dma_lock);
 static int dma_complete = 0;
 static unsigned long irq_flags;
+
 
 static void* ham_drv_dma_get_reg_offset(enum DmaRegisters reg)
 {
@@ -184,6 +192,17 @@ static long ham_drv_ioctl(struct file *filep, unsigned int cmd, unsigned long ar
             printk(KERN_INFO "ham_drv: ioctl sim wait time %lu\n", arg);
             iowrite32(arg, SET_SIM_WAIT_TIME_OFFSET);
             return 0;
+        case IOCTL_SET_PID:
+            printk(KERN_INFO "ham_drv: ioctl pid %lu\n", arg);
+            rcu_read_lock();
+            current_task = pid_task(find_vpid(arg), PIDTYPE_PID);
+            if(current_task == NULL){
+                printk(KERN_INFO "ham_drv: no such pid %lu\n", arg);
+                rcu_read_unlock();
+                return -ENODEV;
+            }
+            rcu_read_unlock();
+            return 0;
         default:
             printk(KERN_ALERT "ham_drv: wrong ioctl command %d\n", cmd);
             return -ENOIOCTLCMD;
@@ -205,6 +224,10 @@ static irqreturn_t ham_drv_interrupt_dma_complete(int irq, void *dev_id)
     ham_drv_dma_write_reg(DMA_CONTROL_REG_BIT_HALFWORD | DMA_CONTROL_REG_BIT_LEEN, CONTROL);
     ham_drv_dma_write_reg(0, STATUS);
     dma_complete = 1;
+    signal_info.si_int = 0;
+    if (current_task != NULL){
+        send_sig_info(SIG_DATA_READY, &signal_info, current_task);
+    }
     spin_unlock(&dma_lock);
     return IRQ_HANDLED;
 }
@@ -280,6 +303,10 @@ static int __init ham_drv_init(void)
     if (buffer == NULL) {
         goto fail_kmalloc_buffer;
     }
+
+    memset(&signal_info, 0, sizeof(struct siginfo));
+    signal_info.si_signo = SIG_DATA_READY;
+    signal_info.si_code = SI_QUEUE;
 
     printk(KERN_INFO "ham_drv: successfully initialized\n");
     return 0;

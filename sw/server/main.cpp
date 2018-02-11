@@ -12,6 +12,11 @@
 #include <random>
 #include <mutex>
 #include <cmath>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <fstream>
 
 #include "processing.h"
 #include "pinger.h"
@@ -22,6 +27,66 @@
 #include <fastcgi++/manager.hpp>
 
 #define DEVICE_NAME "/dev/ham"
+#define SIG_DATA_READY 55
+
+#pragma pack(push,1)
+typedef struct {
+    int preamble;
+    unsigned char beacon_type;
+    unsigned short arrival_time[4];
+} dsp_data;
+#pragma pack(pop)
+
+static union {
+        dsp_data data_out;
+        unsigned char data_buf[sizeof(dsp_data)];
+};
+
+const std::map<std::uint8_t, int> dsp_commands = {
+    {33, 25000},
+    {35, 26000},
+    {36, 27000},
+    {37, 28000},
+    {39, 29000},
+    {40, 30000},
+    {41, 31000},
+    {43, 32000},
+    {44, 33000},
+    {45, 34000},
+    {47, 35000},
+    {48, 36000},
+    {50, 37500},
+    {51, 38000},
+    {52, 39000},
+    {53, 40000},
+    {54, 41000},
+    {55, 42000},
+    {56, 43000},
+    {57, 44000},
+    {60, 45000},
+};
+
+int sock, listener;
+struct sockaddr_in addr;
+std::mutex delays_ready_send_mutex;
+bool delays_ready_send = false;
+double hilbert_threshold;
+
+static void handle_signal(int n, siginfo_t *info, void *unused);
+
+unsigned int calc_fft_freq_comp(int freq)
+{
+    unsigned int freq_comp = freq / 620;
+    unsigned int up_half = ((freq_comp / 2) << 16);
+    unsigned int down_half = freq_comp % 2;
+    return up_half | down_half;
+}
+
+unsigned int calc_phase_inc(int freq)
+{
+    double phase_inc = (double)freq / 100.0 * pow((double)2.0, 32) / 1e6 + 0.5; 
+    return phase_inc;
+}
 
 
 class Driver 
@@ -65,16 +130,134 @@ public:
             std::cerr << "failed open ham device" << std::endl;
             return false;
         }
+        init_signal();
+        create_tcp_threads();
         return true;
     }
 
 private:
+
+    void init_signal()
+    {
+        sig.sa_sigaction = handle_signal;
+        sig.sa_flags = SA_SIGINFO;
+        sigaction(SIG_DATA_READY, &sig, NULL);
+        send(IOCTL_SET_PID, getpid());
+    }
+
+    bool create_tcp_threads()
+    {
+        listener = socket(AF_INET, SOCK_STREAM, 0);
+        if (listener < 0) {
+            std::cout << "failed to create socket" << std::endl;
+            return false;
+        }
+
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(3425);
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        if (bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            std::cout << "failed to bind socket" << std::endl;
+            return false;
+        }
+
+        std::cout << "start listen" << std::endl;
+        listen(listener, 1);
+        std::cout << "finish listen" << std::endl;
+
+        std::thread([this](){
+            int error_code;
+            socklen_t error_code_size = sizeof(error_code);
+            while (1) {
+                std::cout << "try accept" << std::endl;
+                sock = accept(listener, NULL, NULL);
+                if (sock < 0) {   
+                    std::cout << "can't accept" << std::endl;
+                    sleep(1);
+                    continue;
+                }
+                std::cout << "client connected" << std::endl;
+                std::thread([this](){
+                    while (1) {
+                        std::uint8_t command;
+                        if (::recv(sock, &command, sizeof(command), 0) > 0) {
+                            std::cout <<  "client recv command " << (int)command << std::endl;
+                            if (dsp_commands.find(command) != dsp_commands.end()) {
+                                unsigned int freq = 0;
+                                unsigned int freq_comp = dsp_commands.find(command)->second / 620;
+                                unsigned int up_half = ((freq_comp / 2) << 16);
+                                unsigned int down_half = freq_comp % 2;
+                                freq = up_half | down_half;
+                                send(IOCTL_SET_FFT_FREQ, calc_fft_freq_comp(dsp_commands.find(command)->second));
+                            }
+                        }
+                    }
+                }).detach();
+                while (1) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    if (delays_ready_send) {
+                        delays_ready_send_mutex.lock();
+                        delays_ready_send = false;
+                        delays_ready_send_mutex.unlock();
+                        if (::send(sock, data_buf, sizeof(dsp_data), 0) < 0) {
+                            std::cout << "client disconnected" << std::endl;
+                            close(sock);
+                            break;
+                        } else {
+                            std::cout << "client send" << std::endl;
+                        }
+                    }
+                    getsockopt(sock, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
+                    if (error_code) {
+                        std::cout << "client disconnected" << std::endl;
+                        close(sock);
+                        break;       
+                    }
+                }
+            }
+        }).detach();
+        return true;
+    }
+
+
     int ham_driver;
     bool m_is_ready;
+    struct sigaction sig;
 };
 
-Driver driver;
 std::mutex json_mutex;
+Driver driver;
+
+std::mutex processing_mutex;
+
+std::vector<data_type> data;
+std::vector<fourier_type> fourier_result;
+std::vector<hilbert_type> hilbert_result;
+std::vector<data_type> delays;
+
+std::mutex data_ready_send_mutex;
+bool data_ready_send = false;
+int blocks_num;
+int block_size;
+
+static void handle_signal(int n, siginfo_t *info, void *unused) 
+{
+    std::cout << "handle signal" << std::endl;
+    processing_mutex.lock();
+    blocks_num = driver.recv(0, data);
+    delays.resize(blocks_num);
+    block_size = data.size()/blocks_num;
+    process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), hilbert_threshold, hilbert_result, fourier_result);
+    data_ready_send = true;
+    processing_mutex.unlock();
+    data_out.arrival_time[3] = 0;
+    for (int i = 0; i < 3; ++i) {
+        data_out.arrival_time[i] = delays[i];
+    }
+    delays_ready_send_mutex.lock();
+    delays_ready_send = true;
+    delays_ready_send_mutex.unlock();
+}
 
 class WebClientRequest: public Fastcgipp::Request<wchar_t>
 {
@@ -118,7 +301,6 @@ private:
         std::cerr << "inProcessor started" << std::endl;
         const json post = json::parse(environment().postBuffer().begin(), environment().postBuffer().end());
         std::vector<int> v;
-        std::cout << post << std::endl;
         read_json<int>(post, {
             {mode, "mode"},
         });
@@ -151,12 +333,7 @@ private:
         std::cerr << std::endl;
         if (post_is_setup) {
             if (mode == fpga_sim_mode || mode == real_mode) {
-                unsigned int freq = 0;
-                unsigned int freq_comp = post_frequency / 620;
-                unsigned int up_half = ((freq_comp / 2) << 16);
-                unsigned int down_half = freq_comp % 2;
-                freq = up_half | down_half;
-                driver.send(IOCTL_SET_FFT_FREQ, freq);
+                driver.send(IOCTL_SET_FFT_FREQ, calc_fft_freq_comp(post_frequency));
                 driver.send(IOCTL_SET_THRESHOLD, post_fft_threshold);
                 driver.send(IOCTL_SET_SIM_FLAG, (mode == fpga_sim_mode));
             }
@@ -164,11 +341,13 @@ private:
                 driver.send(IOCTL_SET_SIM_DELAY_1, post_delays[0]);
                 driver.send(IOCTL_SET_SIM_DELAY_2, post_delays[1]);
                 driver.send(IOCTL_SET_SIM_DELAY_3, post_delays[2]);
-                double phase_inc = (double)post_sim_frequency / 100.0 * pow((double)2.0, 32) / 1e6 + 0.5; 
-                driver.send(IOCTL_SET_SIM_PHASE_INC, (unsigned int)(phase_inc));
+                driver.send(IOCTL_SET_SIM_PHASE_INC, calc_phase_inc(post_sim_frequency));
                 driver.send(IOCTL_SET_SIM_PING_TIME, post_pulse_len * 100000);
                 driver.send(IOCTL_SET_SIM_WAIT_TIME, post_pulse_rep * 100000);
             }
+            processing_mutex.lock();
+            hilbert_threshold = post_hilbert_threshold;
+            processing_mutex.unlock();
         }
         std::cerr << "inProcessor ended" << std::endl;
         return true;
@@ -182,54 +361,39 @@ private:
             return true;
         }
         if (driver.is_ready()) {
-            std::vector<data_type> data;
-            std::vector<fourier_type> fourier_result;
-            std::vector<hilbert_type> hilbert_result;
-            int blocks_num;
-            if (mode == real_mode) {
-                blocks_num = driver.recv(0, data);
-            }
-            if (mode == fpga_sim_mode) {
-                blocks_num = driver.recv(0, data);
-            }
-            if (mode == serv_sim_mode) {
-                blocks_num = 3;
-                data = Pinger{post_sim_frequency, post_pulse_len, post_amplitude, post_sample_rate}.generate({post_d1, post_d2, post_d3});
-            }
             if (blocks_num == 0) {
                 out << "{\"ready\":0}";
                 return true;
             }
-            const int block_size = data.size()/blocks_num;
+            if (data_ready_send) {
+                processing_mutex.lock();
+                data_ready_send = false;
+                const int slice_beg = std::min(block_size, std::max(post_slice_beg, 0));
+                const int slice_end = std::max(slice_beg, std::min(post_slice_end, block_size));
 
-            std::vector<data_type> delays(blocks_num);
-            process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), post_hilbert_threshold, hilbert_result, fourier_result);
+                auto out_delays = std::bind(&WebClientRequest::out_ary<data_type>, this, delays.begin(), delays.end());
+                
+                auto data_0 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 0*block_size + slice_beg, data.begin() + 0*block_size + slice_end);
+                auto data_1 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 1*block_size + slice_beg, data.begin() + 1*block_size + slice_end);
+                auto data_2 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 2*block_size + slice_beg, data.begin() + 2*block_size + slice_end);
 
-            const int slice_beg = std::min(block_size, std::max(post_slice_beg, 0));
-            const int slice_end = std::max(slice_beg, std::min(post_slice_end, block_size));
+                auto hilbert_0 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 0*block_size + slice_beg, hilbert_result.begin() + 0*block_size + slice_end);
+                auto hilbert_1 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 1*block_size + slice_beg, hilbert_result.begin() + 1*block_size + slice_end);
+                auto hilbert_2 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 2*block_size + slice_beg, hilbert_result.begin() + 2*block_size + slice_end);
 
-            auto out_delays = std::bind(&WebClientRequest::out_ary<data_type>, this, delays.begin(), delays.end());
-            
-            auto data_0 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 0*block_size + slice_beg, data.begin() + 0*block_size + slice_end);
-            auto data_1 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 1*block_size + slice_beg, data.begin() + 1*block_size + slice_end);
-            auto data_2 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 2*block_size + slice_beg, data.begin() + 2*block_size + slice_end);
+                auto fourier_0 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 0*block_size + slice_beg, fourier_result.begin() + 0*block_size + slice_end);
+                auto fourier_1 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 1*block_size + slice_beg, fourier_result.begin() + 1*block_size + slice_end);
+                auto fourier_2 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 2*block_size + slice_beg, fourier_result.begin() + 2*block_size + slice_end);
 
-            auto hilbert_0 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 0*block_size + slice_beg, hilbert_result.begin() + 0*block_size + slice_end);
-            auto hilbert_1 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 1*block_size + slice_beg, hilbert_result.begin() + 1*block_size + slice_end);
-            auto hilbert_2 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 2*block_size + slice_beg, hilbert_result.begin() + 2*block_size + slice_end);
-
-            auto fourier_0 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 0*block_size + slice_beg, fourier_result.begin() + 0*block_size + slice_end);
-            auto fourier_1 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 1*block_size + slice_beg, fourier_result.begin() + 1*block_size + slice_end);
-            auto fourier_2 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 2*block_size + slice_beg, fourier_result.begin() + 2*block_size + slice_end);
-
-            auto msg_bind = js_obj({"delays", "data", "hilbert", "fourier"}, {
-                out_delays,
-                js_ary({data_0, data_1, data_2}),
-                js_ary({hilbert_0, hilbert_1, hilbert_2}),
-                js_ary({fourier_0, fourier_1, fourier_2})
-            });
-
-            msg_bind();
+                auto msg_bind = js_obj({"delays", "data", "hilbert", "fourier"}, {
+                    out_delays,
+                    js_ary({data_0, data_1, data_2}),
+                    js_ary({hilbert_0, hilbert_1, hilbert_2}),
+                    js_ary({fourier_0, fourier_1, fourier_2})
+                });
+                msg_bind();
+                processing_mutex.unlock();
+            }
         }
         return true;
     }
