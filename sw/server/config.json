@@ -1,0 +1,12 @@
+{
+  "is_sim": 1,
+  "hilbert_threshold": 0.6,
+  "fft_threshold": 10,
+  "frequency": 45000,
+  "sim_frequency": 45000,
+  "delay1": 6300,
+  "delay2": 0,
+  "delay3": 63000,
+  "pulse_length": 10,
+  "pulse_repetition": 1000
+}

@@ -92,6 +92,8 @@ unsigned int calc_phase_inc(int freq)
 class Driver 
 {
 public:
+    using json = nlohmann::json;
+
     void send(int cmd, unsigned long arg)
     {
         ioctl(ham_driver, cmd, arg);
@@ -130,6 +132,7 @@ public:
             std::cerr << "failed open ham device" << std::endl;
             return false;
         }
+        load_config();
         init_signal();
         create_tcp_threads();
         return true;
@@ -217,6 +220,29 @@ private:
             }
         }).detach();
         return true;
+    }
+
+    bool load_config()
+    {
+        std::ifstream config_file("/home/config.json");
+        if (config_file.is_open()) {
+            json config;
+            config_file >> config;
+            hilbert_threshold = config.at("hilbert_threshold").get<double>();
+            send(IOCTL_SET_SIM_FLAG,      config.at("is_sim").get<int>());
+            send(IOCTL_SET_THRESHOLD,     config.at("fft_threshold").get<int>());
+            send(IOCTL_SET_FFT_FREQ,      calc_fft_freq_comp(config.at("frequency").get<int>()));
+            send(IOCTL_SET_SIM_PHASE_INC, calc_phase_inc(config.at("sim_frequency").get<int>()));
+            send(IOCTL_SET_SIM_DELAY_1,   config.at("delay1").get<int>());
+            send(IOCTL_SET_SIM_DELAY_2,   config.at("delay2").get<int>());
+            send(IOCTL_SET_SIM_DELAY_3,   config.at("delay3").get<int>());
+            send(IOCTL_SET_SIM_PING_TIME, config.at("pulse_length").get<int>()* 100000);
+            send(IOCTL_SET_SIM_WAIT_TIME, config.at("pulse_repetition").get<int>()* 100000);
+        } else {
+            std::cout << "failed to open config" << std::endl;
+            return false;
+        }
+
     }
 
 
