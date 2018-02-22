@@ -98,6 +98,10 @@ public:
         std::cout << "ioctl " << cmd << std::endl;
     }
 
+    int recv(int cmd) {
+        return ioctl(ham_driver, cmd);
+    }
+
     int recv(int cmd, std::vector<data_type>& out_data) 
     {
         int blocks_num = 4;
@@ -282,13 +286,11 @@ private:
     enum Mode {
         fpga_sim_mode = 0, serv_sim_mode = 1, real_mode = 2, apply_settings = 3
     };
-    enum DmaState {
-        ds_ignore = 0, ds_stop = 1, ds_start = 2
-    };
+    enum EventType{SettingsGet = 0, SettingsSet, StopDMA, StartDMA, Pending, StartNavigTest, DrawData};
     double post_d1, post_d2, post_d3, post_d4, post_hilbert_threshold;
     int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_fft_threshold;
-    int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0, post_pulse_rep;
-    int post_dma_state;
+    int post_pulse_len, post_amplitude, post_sample_rate, mode, post_pulse_rep;
+    int post_event_type;
     std::vector<int> post_delays;
 private:
     template <class T>
@@ -317,10 +319,13 @@ private:
         std::vector<int> v;
         read_json<int>(post, {
             {mode, "mode"},
-            {post_dma_state, "dmaState"},
+            {post_event_type, "eventType"},
         });
-        if (post_dma_state != ds_ignore) {
-            driver.send(post_dma_state == ds_start ? AXI_XADC_DMA_START : AXI_XADC_DMA_STOP);
+        if (post_event_type == StartDMA || post_event_type == StopDMA) {
+            driver.send(post_event_type == StartDMA ? AXI_XADC_DMA_START : AXI_XADC_DMA_STOP);
+            return true;
+        }
+        if (post_event_type == SettingsGet) {
             return true;
         }
         read_json<int>(post, {
@@ -331,7 +336,6 @@ private:
             {post_amplitude, "amplitude"},
             {post_sample_rate, "sampleRate"},
             {post_fft_threshold, "fftThreshold"},
-            {post_is_setup, "is_setup"},
             {post_sim_frequency, "simFrequency"},
             {post_pulse_rep, "pulseRep"},
         });
@@ -350,7 +354,7 @@ private:
             {post_hilbert_threshold, "hilbertThreshold"},
         });
         std::cerr << std::endl;
-        if (post_is_setup) {
+        if (post_event_type == SettingsSet) {
             if (mode == fpga_sim_mode || mode == real_mode) {
                 driver.send(AXI_XADC_SET_THRESHOLD, post_fft_threshold);
                 driver.send(AXI_XADC_SET_FREQUENCY, post_frequency);
@@ -367,7 +371,14 @@ private:
     {
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
-        if (post_is_setup) {
+        if (post_event_type == SettingsSet) {
+            return true;
+        }
+        if (post_event_type == SettingsGet) {
+            out <<  L"{\"fftThreshold\": " << 
+                driver.recv(AXI_XADC_GET_THRESHOLD) << L", " <<
+                L"\"frequency\": " << 
+                driver.recv(AXI_XADC_GET_FREQUENCY) << L"}";
             return true;
         }
         if (driver.is_ready()) {

@@ -6,10 +6,14 @@ $(document).ready(function() {
 
     let requetstId = 0;
 
-    const DmaState = {
-        IGNORE_DMA: 0,
-        STOP_DMA: 1, 
-        START_DMA: 2 
+    const EventType = {
+        SETTINGS_GET:     0, 
+        SETTINGS_SET:     1, 
+        STOP_DMA:         2, 
+        START_DMA:        3, 
+        PENDING:          4, 
+        START_NAVIG_TEST: 5, 
+        DRAW_DATA:        6
     }
 
     // __________________________
@@ -95,10 +99,10 @@ $(document).ready(function() {
         updateContents();
     });
 
-    function postDmaState(dmaState) {
+    function postStartStopEvent(eventType) {
         let postData = {
             mode: Number($("select#modeSelector").val()),
-            dmaState: dmaState
+            eventType: eventType
         }
         $.ajax({
             url: fastcgiAddress,
@@ -111,11 +115,11 @@ $(document).ready(function() {
     }
 
     $("#startDma").click(function() {
-        postDmaState(DmaState.START_DMA);
+        postDmaState(EventType.START_DMA);
     });
 
     $("#stopDma").click(function() {
-        postDmaState(DmaState.STOP_DMA);
+        postDmaState(EventType.STOP_DMA);
     });
 
     function findGetParameter(parameterName) {
@@ -184,7 +188,7 @@ $(document).ready(function() {
             mode: Number($("select#modeSelector").val()),
             slice: semicolonToAry(document.getElementById('slice').value),
             requetstId: ++requetstId,
-            dmaState: DmaState.IGNORE_DMA
+            eventType: DmaState.SETTINGS_SET
         };
         if (modes[$("select#modeSelector").val()].name == "serv_sim") {
             for (var i = 0; i < mode.props.length; i++) {
@@ -271,9 +275,8 @@ $(document).ready(function() {
         let postData = {
             mode: Number($("select#modeSelector").val()),
             slice: semicolonToAry(document.getElementById('slice').value),
-            is_setup: 1,
             requetstId: ++requetstId,
-            dmaState: DmaState.IGNORE_DMA
+            eventType: EventType.SETTINGS_SET
         };
         for (var i = 0; i < mode.props.length; i++) {
             postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);
@@ -288,6 +291,27 @@ $(document).ready(function() {
             data: postData,
             success: function(response) {
                 $("#setButton").html("Set");
+            }
+        });
+    });
+
+    $("#getButton").click(function() {
+        $("#getButton").html("Get*");
+        let mode = modes[$("select#modeSelector").val()];
+        let postData = {
+            mode: Number($("select#modeSelector").val()),
+            eventType: EventType.SETTINGS_GET
+        };
+        postData = JSON.stringify(postData);
+        $.ajax({
+            url: fastcgiAddress,
+            type: "POST",
+            data: postData,
+            success: function(response) {
+                response = JSON.parse(response);
+                $('#frequency').val(response.frequency);
+                $('#fftThreshold').val(response.fftThreshold);
+                $("#getButton").html("Get");
             }
         });
     });
@@ -321,21 +345,21 @@ $(document).ready(function() {
             props: [
                 {
                     tag: "input",
-                    caption: "FFT threshold",
+                    caption: "FFT threshold (comp)",
                     id: "fftThreshold",
                     attrs: [["type", "number"], ["value", "0"]],
                     transform: Number
                 },
                 {
                     tag: "input",
-                    caption: "Hilbert threshold",
+                    caption: "Hilbert threshold (rx)",
                     id: "hilbertThreshold",
                     attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
                     transform: Number
                 },
                 {
                     tag: "input",
-                    caption: "Frequency",
+                    caption: "Frequency (kHz)",
                     id: "frequency",
                     attrs: [["type", "number"], ["value", "25"], ["min", "0"], ["step", "1"]],
                     transform: Number
