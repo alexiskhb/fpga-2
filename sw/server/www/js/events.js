@@ -1,6 +1,5 @@
 $(document).ready(function() {
-    // nginx redirects /sv -> host:8000 (see README/nginx.conf)
-    const fastcgiAddress = "/sv";
+    const fastcgiAddress = "cgi-bin";
     // 1/nanosecond
     const invNs = 1e8;
     const speedOfSound = 1500;
@@ -163,12 +162,7 @@ $(document).ready(function() {
                 postData[mode.props[i].id] = mode.props[i].transform(value);
             }
         }
-        // let pc = ("0;0;0").split(';');
-        // let d1 = Math.sqrt((pc[0] - a1[0])**2 + (pc[1] - a1[1])**2 + (pc[2] - a1[2])**2);
-        // let d2 = Math.sqrt((pc[0] - a2[0])**2 + (pc[1] - a2[1])**2 + (pc[2] - a2[2])**2);
-        // let d3 = Math.sqrt((pc[0] - a3[0])**2 + (pc[1] - a3[1])**2 + (pc[2] - a3[2])**2);
-        // let d4 = Math.sqrt((pc[0] - a4[0])**2 + (pc[1] - a4[1])**2 + (pc[2] - a4[2])**2);
-
+        
         postData = JSON.stringify(postData);
         $.ajax({
             url: fastcgiAddress,
@@ -292,128 +286,6 @@ $(document).ready(function() {
         console.log("indoc");
         updateInterval();
         $(document.getElementById("simulatorControlsDiv")).hide();
-        registerMode({
-            name: "fpga_sim",
-            props: [
-                {
-                    tag: "input",
-                    caption: "Simulation frequency (Hz)",
-                    id: "simFrequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "FFT threshold",
-                    id: "fftThreshold",
-                    attrs: [["type", "number"], ["value", "0"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Hilbert threshold",
-                    id: "hilbertThreshold",
-                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Frequency (Hz)",
-                    id: "frequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Delays",
-                    id: "delays",
-                    attrs: [["type", "text"], ["value", "0;0;0"]],
-                    transform: semicolonToAry
-                },
-                {
-                    tag: "input",
-                    caption: "Pulse length (ms)",
-                    id: "pulseLen",
-                    attrs: [["type", "number"], ["value", "10"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Pulse repetition (ms)",
-                    id: "pulseRep",
-                    attrs: [["type", "number"], ["value", "1000"]],
-                    transform: Number
-                }
-            ]
-        });
-        registerMode({
-            name: "serv_sim",
-            props: [
-                {
-                    tag: "input",
-                    caption: "Sample rate",
-                    id: "sampleRate",
-                    attrs: [["type", "number"], ["value", "150000"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Hilbert threshold",
-                    id: "hilbertThreshold",
-                    attrs: [["type", "number"], ["value", "0"], ["step", "0.01"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Simulation frequency (Hz)",
-                    id: "simFrequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Pulse length",
-                    id: "pulseLen",
-                    attrs: [["type", "number"], ["value", "1"], ["min", "0"], ["max", "12"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "Amplitude",
-                    id: "amplitude",
-                    attrs: [["type", "number"], ["value", "100"], ["min", "0"], ["max", "20000"]],
-                    transform: Number
-                },
-                {
-                    tag: "input",
-                    caption: "A1",
-                    id: "a1Coord",
-                    attrs: [["type", "text"], ["value", "0;0;0"]],
-                    transform: semicolonToAry
-                },
-                {
-                    tag: "input",
-                    caption: "A2",
-                    id: "a2Coord",
-                    attrs: [["type", "text"], ["value", "0;0;0"]],
-                    transform: semicolonToAry
-                },
-                {
-                    tag: "input",
-                    caption: "A3",
-                    id: "a3Coord",
-                    attrs: [["type", "text"], ["value", "0;0;0"]],
-                    transform: semicolonToAry
-                },
-                {
-                    tag: "input",
-                    caption: "A4",
-                    id: "a4Coord",
-                    attrs: [["type", "text"], ["value", "0;0;0"]],
-                    transform: semicolonToAry
-                }
-            ]
-        });
         registerMode({
             name: "real_mode",
             props: [

@@ -20,14 +20,28 @@
 
 #include "processing.h"
 #include "pinger.h"
-#include "../driver/ioctl_commands.h"
 #include "json/json.hpp"
 
 #include <fastcgi++/request.hpp>
 #include <fastcgi++/manager.hpp>
 
 #define DEVICE_NAME "/dev/ham"
-#define SIG_DATA_READY 55
+
+#define AXI_XADC_IOCTL_BASE       'W'
+#define AXI_HANDLE_INTERRUPT      _IO(AXI_XADC_IOCTL_BASE, 0)
+#define AXI_XADC_SET_PID          _IO(AXI_XADC_IOCTL_BASE, 1)
+#define AXI_XADC_DMA_CONFIG       _IO(AXI_XADC_IOCTL_BASE, 2)
+#define AXI_XADC_DMA_START        _IO(AXI_XADC_IOCTL_BASE, 3)
+#define AXI_XADC_DMA_STOP         _IO(AXI_XADC_IOCTL_BASE, 4)
+#define AXI_XADC_SET_THRESHOLD    _IO(AXI_XADC_IOCTL_BASE, 5)
+#define AXI_XADC_SET_FREQUENCY    _IO(AXI_XADC_IOCTL_BASE, 6)
+#define AXI_XADC_GET_THRESHOLD    _IO(AXI_XADC_IOCTL_BASE, 7)
+#define AXI_XADC_GET_FREQUENCY    _IO(AXI_XADC_IOCTL_BASE, 8)
+#define AXI_XADC_REARM            _IO(AXI_XADC_IOCTL_BASE, 9)
+
+#define SIG_DATA_READY            55
+#define FIFO_SIZE                 8192
+
 
 #pragma pack(push,1)
 typedef struct {
@@ -40,30 +54,6 @@ typedef struct {
 static union {
         dsp_data data_out;
         unsigned char data_buf[sizeof(dsp_data)];
-};
-
-const std::map<std::uint8_t, int> dsp_commands = {
-    {33, 25000},
-    {35, 26000},
-    {36, 27000},
-    {37, 28000},
-    {39, 29000},
-    {40, 30000},
-    {41, 31000},
-    {43, 32000},
-    {44, 33000},
-    {45, 34000},
-    {47, 35000},
-    {48, 36000},
-    {50, 37500},
-    {51, 38000},
-    {52, 39000},
-    {53, 40000},
-    {54, 41000},
-    {55, 42000},
-    {56, 43000},
-    {57, 44000},
-    {60, 45000},
 };
 
 int sock, listener;
@@ -135,6 +125,7 @@ public:
         load_config();
         init_signal();
         create_tcp_threads();
+        ioctl(ham_driver, AXI_XADC_DMA_START);
         return true;
     }
 
@@ -145,7 +136,7 @@ private:
         sig.sa_sigaction = handle_signal;
         sig.sa_flags = SA_SIGINFO;
         sigaction(SIG_DATA_READY, &sig, NULL);
-        send(IOCTL_SET_PID, getpid());
+        send(AXI_XADC_SET_PID, getpid());
     }
 
     bool create_tcp_threads()
@@ -180,22 +171,19 @@ private:
                     continue;
                 }
                 std::cout << "client connected" << std::endl;
+
                 std::thread([this](){
                     while (1) {
                         std::uint8_t command;
                         if (::recv(sock, &command, sizeof(command), 0) > 0) {
-                            std::cout <<  "client recv command " << (int)command << std::endl;
-                            if (dsp_commands.find(command) != dsp_commands.end()) {
-                                unsigned int freq = 0;
-                                unsigned int freq_comp = dsp_commands.find(command)->second / 620;
-                                unsigned int up_half = ((freq_comp / 2) << 16);
-                                unsigned int down_half = freq_comp % 2;
-                                freq = up_half | down_half;
-                                send(IOCTL_SET_FFT_FREQ, calc_fft_freq_comp(dsp_commands.find(command)->second));
+                            if (33 <= command && command <= 60) {
+                                std::cout <<  "client recv command " << (int)command << std::endl;
+                                send(AXI_XADC_SET_FREQUENCY, command);
                             }
                         }
                     }
                 }).detach();
+
                 while (1) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     if (delays_ready_send) {
@@ -229,22 +217,14 @@ private:
             json config;
             config_file >> config;
             hilbert_threshold = config.at("hilbert_threshold").get<double>();
-            send(IOCTL_SET_SIM_FLAG,      config.at("is_sim").get<int>());
-            send(IOCTL_SET_THRESHOLD,     config.at("fft_threshold").get<int>());
-            send(IOCTL_SET_FFT_FREQ,      calc_fft_freq_comp(config.at("frequency").get<int>()));
-            send(IOCTL_SET_SIM_PHASE_INC, calc_phase_inc(config.at("sim_frequency").get<int>()));
-            send(IOCTL_SET_SIM_DELAY_1,   config.at("delay1").get<int>());
-            send(IOCTL_SET_SIM_DELAY_2,   config.at("delay2").get<int>());
-            send(IOCTL_SET_SIM_DELAY_3,   config.at("delay3").get<int>());
-            send(IOCTL_SET_SIM_PING_TIME, config.at("pulse_length").get<int>()* 100000);
-            send(IOCTL_SET_SIM_WAIT_TIME, config.at("pulse_repetition").get<int>()* 100000);
+            send(AXI_XADC_SET_THRESHOLD, config.at("fft_threshold").get<int>());
+            send(AXI_XADC_SET_FREQUENCY, calc_fft_freq_comp(config.at("frequency").get<int>()));
         } else {
             std::cout << "failed to open config" << std::endl;
             return false;
         }
-
+        return true;
     }
-
 
     int ham_driver;
     bool m_is_ready;
@@ -301,6 +281,7 @@ private:
     double post_d1, post_d2, post_d3, post_d4, post_hilbert_threshold;
     int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_fft_threshold;
     int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0, post_pulse_rep;
+    int post_event_type;
     std::vector<int> post_delays;
 private:
     template <class T>
@@ -359,17 +340,8 @@ private:
         std::cerr << std::endl;
         if (post_is_setup) {
             if (mode == fpga_sim_mode || mode == real_mode) {
-                driver.send(IOCTL_SET_FFT_FREQ, calc_fft_freq_comp(post_frequency));
-                driver.send(IOCTL_SET_THRESHOLD, post_fft_threshold);
-                driver.send(IOCTL_SET_SIM_FLAG, (mode == fpga_sim_mode));
-            }
-            if (mode == fpga_sim_mode) {
-                driver.send(IOCTL_SET_SIM_DELAY_1, post_delays[0]);
-                driver.send(IOCTL_SET_SIM_DELAY_2, post_delays[1]);
-                driver.send(IOCTL_SET_SIM_DELAY_3, post_delays[2]);
-                driver.send(IOCTL_SET_SIM_PHASE_INC, calc_phase_inc(post_sim_frequency));
-                driver.send(IOCTL_SET_SIM_PING_TIME, post_pulse_len * 100000);
-                driver.send(IOCTL_SET_SIM_WAIT_TIME, post_pulse_rep * 100000);
+                driver.send(AXI_XADC_SET_THRESHOLD, post_fft_threshold);
+                driver.send(AXI_XADC_SET_FREQUENCY, post_frequency);
             }
             processing_mutex.lock();
             hilbert_threshold = post_hilbert_threshold;
@@ -399,17 +371,17 @@ private:
 
                 auto out_delays = std::bind(&WebClientRequest::out_ary<data_type>, this, delays.begin(), delays.end());
                 
-                auto data_0 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 0*block_size + slice_beg, data.begin() + 0*block_size + slice_end);
-                auto data_1 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 1*block_size + slice_beg, data.begin() + 1*block_size + slice_end);
-                auto data_2 = std::bind(&WebClientRequest::out_indexed_ary<data_type>, this, data.begin() + 2*block_size + slice_beg, data.begin() + 2*block_size + slice_end);
+                auto data_0 = std::bind(&WebClientRequest::out_ary<data_type>, this, data.begin() + 0*block_size + slice_beg, data.begin() + 0*block_size + slice_end);
+                auto data_1 = std::bind(&WebClientRequest::out_ary<data_type>, this, data.begin() + 1*block_size + slice_beg, data.begin() + 1*block_size + slice_end);
+                auto data_2 = std::bind(&WebClientRequest::out_ary<data_type>, this, data.begin() + 2*block_size + slice_beg, data.begin() + 2*block_size + slice_end);
 
-                auto hilbert_0 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 0*block_size + slice_beg, hilbert_result.begin() + 0*block_size + slice_end);
-                auto hilbert_1 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 1*block_size + slice_beg, hilbert_result.begin() + 1*block_size + slice_end);
-                auto hilbert_2 = std::bind(&WebClientRequest::out_indexed_ary<hilbert_type>, this, hilbert_result.begin() + 2*block_size + slice_beg, hilbert_result.begin() + 2*block_size + slice_end);
+                auto hilbert_0 = std::bind(&WebClientRequest::out_ary<hilbert_type>, this, hilbert_result.begin() + 0*block_size + slice_beg, hilbert_result.begin() + 0*block_size + slice_end);
+                auto hilbert_1 = std::bind(&WebClientRequest::out_ary<hilbert_type>, this, hilbert_result.begin() + 1*block_size + slice_beg, hilbert_result.begin() + 1*block_size + slice_end);
+                auto hilbert_2 = std::bind(&WebClientRequest::out_ary<hilbert_type>, this, hilbert_result.begin() + 2*block_size + slice_beg, hilbert_result.begin() + 2*block_size + slice_end);
 
-                auto fourier_0 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 0*block_size + slice_beg, fourier_result.begin() + 0*block_size + slice_end);
-                auto fourier_1 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 1*block_size + slice_beg, fourier_result.begin() + 1*block_size + slice_end);
-                auto fourier_2 = std::bind(&WebClientRequest::out_indexed_ary<fourier_type>, this, fourier_result.begin() + 2*block_size + slice_beg, fourier_result.begin() + 2*block_size + slice_end);
+                auto fourier_0 = std::bind(&WebClientRequest::out_ary<fourier_type>, this, fourier_result.begin() + 0*block_size + slice_beg, fourier_result.begin() + 0*block_size + slice_end);
+                auto fourier_1 = std::bind(&WebClientRequest::out_ary<fourier_type>, this, fourier_result.begin() + 1*block_size + slice_beg, fourier_result.begin() + 1*block_size + slice_end);
+                auto fourier_2 = std::bind(&WebClientRequest::out_ary<fourier_type>, this, fourier_result.begin() + 2*block_size + slice_beg, fourier_result.begin() + 2*block_size + slice_end);
 
                 auto msg_bind = js_obj({"delays", "data", "hilbert", "fourier"}, {
                     out_delays,
@@ -495,7 +467,9 @@ private:
 
 int main(int argc, char** argv)
 {
-    driver.init(DEVICE_NAME);
+    if (!driver.init(DEVICE_NAME)) {
+        return 0;
+    }
     Fastcgipp::Manager<WebClientRequest> manager;
     manager.setupSignals();
     manager.listen("127.0.0.1", argc > 1 ? argv[1] : "8000");
