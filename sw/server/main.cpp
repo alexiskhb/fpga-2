@@ -143,7 +143,7 @@ public:
         load_config();
         init_signal();
         create_tcp_threads();
-        ioctl(ham_driver, AXI_XADC_DMA_START);
+        send(AXI_XADC_DMA_START);
         return true;
     }
 
@@ -168,6 +168,9 @@ private:
             std::cout << "failed to create socket" << std::endl;
             return false;
         }
+
+        int reuse = 1;
+        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
         addr.sin_family = AF_INET;
         addr.sin_port = htons(3425);
