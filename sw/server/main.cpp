@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/mman.h>
 #include <netinet/in.h>
 #include <fstream>
 
@@ -62,6 +63,8 @@ std::mutex delays_ready_send_mutex;
 bool delays_ready_send = false;
 double hilbert_threshold;
 
+unsigned char *buffer;
+
 static void handle_signal(int n, siginfo_t *info, void *unused);
 
 unsigned int calc_fft_freq_comp(int freq)
@@ -97,20 +100,16 @@ public:
 
     int recv(int cmd, std::vector<data_type>& out_data) 
     {
-        int blocks_num = 3;
+        int blocks_num = 4;
         int block_size = 1024;
         int buf_len = block_size*blocks_num;
-        data_type buf[buf_len] = {0};
-        int result = read(ham_driver, buf, buf_len * sizeof(data_type));
-        if (result == 0) {
-            out_data.clear();
-            return 0;
-        }
         out_data.resize(buf_len);
-        for (int i = 0; i < buf_len; i += blocks_num) {
-            out_data[0*block_size + i/blocks_num] = buf[i];
-            out_data[1*block_size + i/blocks_num] = buf[i + 1];
-            out_data[2*block_size + i/blocks_num] = buf[i + 2];
+        unsigned short *draw_data_ptr = reinterpret_cast<unsigned short *>(buffer);
+        for (int i = 0; i < FIFO_SIZE / 2; i+=4) {
+            out_data[i / 4 + 0 * FIFO_SIZE / 8] = draw_data_ptr[i + 0];
+            out_data[i / 4 + 1 * FIFO_SIZE / 8] = draw_data_ptr[i + 1];
+            out_data[i / 4 + 2 * FIFO_SIZE / 8] = draw_data_ptr[i + 2];
+            out_data[i / 4 + 3 * FIFO_SIZE / 8] = draw_data_ptr[i + 3];
         }
         return blocks_num;
     }
@@ -127,6 +126,7 @@ public:
             std::cerr << "failed open ham device" << std::endl;
             return false;
         }
+        buffer = static_cast<unsigned char *>(mmap(0, FIFO_SIZE, PROT_READ, MAP_SHARED, ham_driver, 0));
         load_config();
         init_signal();
         create_tcp_threads();
@@ -261,8 +261,7 @@ static void handle_signal(int n, siginfo_t *info, void *unused)
     process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), hilbert_threshold, hilbert_result, fourier_result);
     data_ready_send = true;
     processing_mutex.unlock();
-    data_out.arrival_time[3] = 0;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < blocks_num; ++i) {
         data_out.arrival_time[i] = delays[i];
     }
     delays_ready_send_mutex.lock();

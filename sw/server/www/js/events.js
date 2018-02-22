@@ -314,7 +314,6 @@ $(document).ready(function() {
     });
 
     function init() {
-        console.log("indoc");
         updateInterval();
         $(document.getElementById("simulatorControlsDiv")).hide();
         registerMode({
@@ -336,9 +335,9 @@ $(document).ready(function() {
                 },
                 {
                     tag: "input",
-                    caption: "Frequency (Hz)",
+                    caption: "Frequency",
                     id: "frequency",
-                    attrs: [["type", "number"], ["value", "23000"], ["min", "0"], ["step", "100"]],
+                    attrs: [["type", "number"], ["value", "25"], ["min", "0"], ["step", "1"]],
                     transform: Number
                 }
             ]
