@@ -27,7 +27,7 @@
 #include <fastcgi++/request.hpp>
 #include <fastcgi++/manager.hpp>
 
-#define DEVICE_NAME "/dev/ham"
+#define DEVICE_NAME "/dev/channel0"
 
 #define AXI_XADC_IOCTL_BASE       'W'
 #define AXI_HANDLE_INTERRUPT      _IO(AXI_XADC_IOCTL_BASE, 0)
@@ -54,8 +54,8 @@ typedef struct {
 #pragma pack(pop)
 
 static union {
-        dsp_data data_out;
-        unsigned char data_buf[sizeof(dsp_data)];
+    dsp_data data_out;
+    unsigned char data_buf[sizeof(dsp_data)];
 };
 
 template <typename Duration, typename Function>
@@ -509,7 +509,7 @@ int main(int argc, char** argv)
     }
     Fastcgipp::Manager<WebClientRequest> manager;
     manager.setupSignals();
-    manager.listen("127.0.0.1", argc > 1 ? argv[1] : "8000");
+    manager.listen("127.0.0.1", argc > 1 ? argv[1] : "1026");
     manager.start();
     manager.join();
     return 0;

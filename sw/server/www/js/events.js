@@ -104,6 +104,8 @@ $(document).ready(function() {
             mode: Number($("select#modeSelector").val()),
             eventType: eventType
         }
+        
+        postData = JSON.stringify(postData);
         $.ajax({
             url: fastcgiAddress,
             type: "POST",
@@ -115,11 +117,11 @@ $(document).ready(function() {
     }
 
     $("#startDma").click(function() {
-        postDmaState(EventType.START_DMA);
+        postStartStopEvent(EventType.START_DMA);
     });
 
     $("#stopDma").click(function() {
-        postDmaState(EventType.STOP_DMA);
+        postStartStopEvent(EventType.STOP_DMA);
     });
 
     function findGetParameter(parameterName) {
@@ -188,7 +190,7 @@ $(document).ready(function() {
             mode: Number($("select#modeSelector").val()),
             slice: semicolonToAry(document.getElementById('slice').value),
             requetstId: ++requetstId,
-            eventType: DmaState.SETTINGS_SET
+            eventType: EventType.PENDING
         };
         if (modes[$("select#modeSelector").val()].name == "serv_sim") {
             for (var i = 0; i < mode.props.length; i++) {
