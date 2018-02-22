@@ -8,6 +8,7 @@
 #include <string>
 #include <limits>
 #include <ctime>
+#include <chrono>
 #include <functional>
 #include <random>
 #include <mutex>
@@ -56,6 +57,14 @@ static union {
         dsp_data data_out;
         unsigned char data_buf[sizeof(dsp_data)];
 };
+
+template <typename Duration, typename Function>
+void timer(const Duration& d, const Function& f) {
+    std::thread([d, f](){
+        std::this_thread::sleep_for(d);
+        f();
+    }).detach();
+}
 
 int sock, listener;
 struct sockaddr_in addr;
@@ -136,6 +145,10 @@ public:
         create_tcp_threads();
         ioctl(ham_driver, AXI_XADC_DMA_START);
         return true;
+    }
+
+    void wait() {
+        timer(std::chrono::milliseconds(500), [this](){ioctl(ham_driver, AXI_XADC_REARM);});
     }
 
 private:
@@ -271,6 +284,7 @@ static void handle_signal(int n, siginfo_t *info, void *unused)
     delays_ready_send_mutex.lock();
     delays_ready_send = true;
     delays_ready_send_mutex.unlock();
+    driver.wait();
 }
 
 class WebClientRequest: public Fastcgipp::Request<wchar_t>
