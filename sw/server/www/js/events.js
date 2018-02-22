@@ -6,6 +6,12 @@ $(document).ready(function() {
 
     let requetstId = 0;
 
+    const DmaState = {
+        IGNORE_DMA: 0,
+        STOP_DMA: 1, 
+        START_DMA: 2 
+    }
+
     // __________________________
     // | chart00 | chart01 | ...
     // | chart10 | chart11 | ...
@@ -89,6 +95,29 @@ $(document).ready(function() {
         updateContents();
     });
 
+    function postDmaState(dmaState) {
+        let postData = {
+            mode: Number($("select#modeSelector").val()),
+            dmaState: dmaState
+        }
+        $.ajax({
+            url: fastcgiAddress,
+            type: "POST",
+            data: postData,
+            success: function(response) {
+
+            }
+        });
+    }
+
+    $("#startDma").click(function() {
+        postDmaState(DmaState.START_DMA);
+    });
+
+    $("#stopDma").click(function() {
+        postDmaState(DmaState.STOP_DMA);
+    });
+
     function findGetParameter(parameterName) {
         var result = 0,
         tmp = [];
@@ -154,7 +183,8 @@ $(document).ready(function() {
         let postData = {
             mode: Number($("select#modeSelector").val()),
             slice: semicolonToAry(document.getElementById('slice').value),
-            requetstId: ++requetstId
+            requetstId: ++requetstId,
+            dmaState: DmaState.IGNORE_DMA
         };
         if (modes[$("select#modeSelector").val()].name == "serv_sim") {
             for (var i = 0; i < mode.props.length; i++) {
@@ -242,7 +272,8 @@ $(document).ready(function() {
             mode: Number($("select#modeSelector").val()),
             slice: semicolonToAry(document.getElementById('slice').value),
             is_setup: 1,
-            requetstId: ++requetstId
+            requetstId: ++requetstId,
+            dmaState: DmaState.IGNORE_DMA
         };
         for (var i = 0; i < mode.props.length; i++) {
             postData[mode.props[i].id] = mode.props[i].transform(document.getElementById(mode.props[i].id).value);

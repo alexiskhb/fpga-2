@@ -90,6 +90,11 @@ public:
         std::cout << "ioctl " << cmd << " " << arg << std::endl;
     }
 
+    void send(int cmd) {
+        ioctl(ham_driver, cmd);
+        std::cout << "ioctl " << cmd << std::endl;
+    }
+
     int recv(int cmd, std::vector<data_type>& out_data) 
     {
         int blocks_num = 3;
@@ -278,10 +283,13 @@ private:
     enum Mode {
         fpga_sim_mode = 0, serv_sim_mode = 1, real_mode = 2, apply_settings = 3
     };
+    enum DmaState {
+        ds_ignore = 0, ds_stop = 1, ds_start = 2
+    };
     double post_d1, post_d2, post_d3, post_d4, post_hilbert_threshold;
     int post_slice_beg, post_slice_end, post_frequency, post_sim_frequency, post_fft_threshold;
     int post_pulse_len, post_amplitude, post_sample_rate, mode, post_is_setup = 0, post_pulse_rep;
-    int post_event_type;
+    int post_dma_state;
     std::vector<int> post_delays;
 private:
     template <class T>
@@ -310,7 +318,12 @@ private:
         std::vector<int> v;
         read_json<int>(post, {
             {mode, "mode"},
+            {post_dma_state, "dmaState"},
         });
+        if (post_dma_state != ds_ignore) {
+            driver.send(post_dma_state == ds_start ? AXI_XADC_DMA_START : AXI_XADC_DMA_STOP);
+            return true;
+        }
         read_json<int>(post, {
             {post_slice_beg, "sliceBeg"},
             {post_slice_end, "sliceEnd"},
