@@ -1,49 +1,68 @@
 #define _USE_MATH_DEFINES
-#include <iostream>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <sstream>
-#include <fcntl.h>
-#include <string>
-#include <limits>
-#include <ctime>
+#include <cerrno>
 #include <chrono>
-#include <functional>
-#include <random>
-#include <mutex>
 #include <cmath>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/mman.h>
-#include <netinet/in.h>
+#include <condition_variable>
+#include <cstring>
+#include <ctime>
+#include <fcntl.h>
 #include <fstream>
+#include <functional>
+#include <iostream>
+#include <limits>
+#include <linux/types.h>
+#include <mutex>
+#include <netinet/in.h>
+#include <random>
+#include <signal.h>
+#include <sstream>
+#include <string>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <thread>
+#include <unistd.h>
+#include <vector>
 
 #include "processing.h"
 #include "pinger.h"
+#include "../driver/ioctl_commands.h"
 #include "json/json.hpp"
 
 #include <fastcgi++/request.hpp>
 #include <fastcgi++/manager.hpp>
 
-#define DEVICE_NAME "/dev/channel0"
 
-#define AXI_XADC_IOCTL_BASE       'W'
-#define AXI_HANDLE_INTERRUPT      _IO(AXI_XADC_IOCTL_BASE, 0)
-#define AXI_XADC_SET_PID          _IO(AXI_XADC_IOCTL_BASE, 1)
-#define AXI_XADC_DMA_CONFIG       _IO(AXI_XADC_IOCTL_BASE, 2)
-#define AXI_XADC_DMA_START        _IO(AXI_XADC_IOCTL_BASE, 3)
-#define AXI_XADC_DMA_STOP         _IO(AXI_XADC_IOCTL_BASE, 4)
-#define AXI_XADC_SET_THRESHOLD    _IO(AXI_XADC_IOCTL_BASE, 5)
-#define AXI_XADC_SET_FREQUENCY    _IO(AXI_XADC_IOCTL_BASE, 6)
-#define AXI_XADC_GET_THRESHOLD    _IO(AXI_XADC_IOCTL_BASE, 7)
-#define AXI_XADC_GET_FREQUENCY    _IO(AXI_XADC_IOCTL_BASE, 8)
-#define AXI_XADC_REARM            _IO(AXI_XADC_IOCTL_BASE, 9)
+/* IOCTL defines */
+#define AXI_XADC_IOCTL_BASE                             'W'
+#define AXI_HANDLE_INTERRUPT                            _IO(AXI_XADC_IOCTL_BASE, 0)
+#define AXI_XADC_SET_PID                                _IO(AXI_XADC_IOCTL_BASE, 1)
+#define AXI_XADC_DMA_CONFIG                             _IO(AXI_XADC_IOCTL_BASE, 2)
+#define AXI_XADC_DMA_START                              _IO(AXI_XADC_IOCTL_BASE, 3)
+#define AXI_XADC_DMA_STOP                               _IO(AXI_XADC_IOCTL_BASE, 4)
+#define AXI_XADC_SET_THRESHOLD                          _IO(AXI_XADC_IOCTL_BASE, 5)
+#define AXI_XADC_SET_FREQUENCY                          _IO(AXI_XADC_IOCTL_BASE, 6)
+#define AXI_XADC_GET_THRESHOLD                          _IO(AXI_XADC_IOCTL_BASE, 7)
+#define AXI_XADC_GET_FREQUENCY                          _IO(AXI_XADC_IOCTL_BASE, 8)
+#define AXI_XADC_REARM                                  _IO(AXI_XADC_IOCTL_BASE, 9)
 
-#define SIG_DATA_READY            55
-#define FIFO_SIZE                 8192
+#define SIG_DATA_READY                  55
+#define FIFO_SIZE                       8192
 
+#define MAX_LOG_CNT (500)
+int log_cntr = 0;
+
+using namespace std;
+
+template <typename Duration, typename Function>
+void timer(Duration const & d, Function const & f)
+{
+    std::thread([d, f](){
+        std::this_thread::sleep_for(d);
+        f();
+    }).detach();
+}
 
 #pragma pack(push,1)
 typedef struct {
@@ -53,241 +72,172 @@ typedef struct {
 } dsp_data;
 #pragma pack(pop)
 
-static union {
-    dsp_data data_out;
-    unsigned char data_buf[sizeof(dsp_data)];
-};
+namespace {
+    int fd;
+    std::mutex mtx_dev;
 
-template <typename Duration, typename Function>
-void timer(const Duration& d, const Function& f) {
-    std::thread([d, f](){
-        std::this_thread::sleep_for(d);
-        f();
-    }).detach();
-}
+    unsigned short *draw_data_ptr;
+    unsigned short draw_data[FIFO_SIZE / 2];
 
-int sock, listener;
-struct sockaddr_in addr;
-std::mutex delays_ready_send_mutex;
-bool delays_ready_send = false;
-double hilbert_threshold;
+    unsigned char *buffer;
 
-unsigned char *buffer;
-
-static void handle_signal(int n, siginfo_t *info, void *unused);
-
-unsigned int calc_fft_freq_comp(int freq)
-{
-    unsigned int freq_comp = freq / 620;
-    unsigned int up_half = ((freq_comp / 2) << 16);
-    unsigned int down_half = freq_comp % 2;
-    return up_half | down_half;
-}
-
-unsigned int calc_phase_inc(int freq)
-{
-    double phase_inc = (double)freq / 100.0 * pow((double)2.0, 32) / 1e6 + 0.5; 
-    return phase_inc;
-}
-
-
-class Driver 
-{
-public:
-    using json = nlohmann::json;
-
-    void send(int cmd, unsigned long arg)
-    {
-        ioctl(ham_driver, cmd, arg);
-        std::cout << "ioctl " << cmd << " " << arg << std::endl;
-    }
-
-    void send(int cmd) {
-        ioctl(ham_driver, cmd);
-        std::cout << "ioctl " << cmd << std::endl;
-    }
-
-    int recv(int cmd) {
-        return ioctl(ham_driver, cmd);
-    }
-
-    int recv(int cmd, std::vector<data_type>& out_data) 
-    {
-        int blocks_num = 4;
-        int block_size = 1024;
-        int buf_len = block_size*blocks_num;
-        out_data.resize(buf_len);
-        unsigned short *draw_data_ptr = reinterpret_cast<unsigned short *>(buffer);
-        for (int i = 0; i < FIFO_SIZE / 2; i+=4) {
-            out_data[i / 4 + 0 * FIFO_SIZE / 8] = draw_data_ptr[i + 0];
-            out_data[i / 4 + 1 * FIFO_SIZE / 8] = draw_data_ptr[i + 1];
-            out_data[i / 4 + 2 * FIFO_SIZE / 8] = draw_data_ptr[i + 2];
-            out_data[i / 4 + 3 * FIFO_SIZE / 8] = draw_data_ptr[i + 3];
-        }
-        return blocks_num;
-    }
-
-    bool is_ready() 
-    {
-        return true;
-    }
-
-    bool init(const char* name) 
-    {
-        ham_driver = open(name, O_RDWR);
-        if (ham_driver < 0) {
-            std::cerr << "failed open ham device" << std::endl;
-            return false;
-        }
-        buffer = static_cast<unsigned char *>(mmap(0, FIFO_SIZE, PROT_READ, MAP_SHARED, ham_driver, 0));
-        load_config();
-        init_signal();
-        create_tcp_threads();
-        send(AXI_XADC_DMA_START);
-        return true;
-    }
-
-    void wait() {
-        timer(std::chrono::milliseconds(500), [this](){ioctl(ham_driver, AXI_XADC_REARM);});
-    }
-
-private:
-
-    void init_signal()
-    {
-        sig.sa_sigaction = handle_signal;
-        sig.sa_flags = SA_SIGINFO;
-        sigaction(SIG_DATA_READY, &sig, NULL);
-        send(AXI_XADC_SET_PID, getpid());
-    }
-
-    bool create_tcp_threads()
-    {
-        listener = socket(AF_INET, SOCK_STREAM, 0);
-        if (listener < 0) {
-            std::cout << "failed to create socket" << std::endl;
-            return false;
-        }
-
-        int reuse = 1;
-        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(3425);
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
-        if (bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-            std::cout << "failed to bind socket" << std::endl;
-            return false;
-        }
-
-        std::cout << "start listen" << std::endl;
-        listen(listener, 1);
-        std::cout << "finish listen" << std::endl;
-
-        std::thread([this](){
-            int error_code;
-            socklen_t error_code_size = sizeof(error_code);
-            while (1) {
-                std::cout << "try accept" << std::endl;
-                sock = accept(listener, NULL, NULL);
-                if (sock < 0) {   
-                    std::cout << "can't accept" << std::endl;
-                    sleep(1);
-                    continue;
-                }
-                std::cout << "client connected" << std::endl;
-
-                std::thread([this](){
-                    while (1) {
-                        std::uint8_t command;
-                        if (::recv(sock, &command, sizeof(command), 0) > 0) {
-                            if (33 <= command && command <= 60) {
-                                std::cout <<  "client recv command " << (int)command << std::endl;
-                                send(AXI_XADC_SET_FREQUENCY, command);
-                            }
-                        }
-                    }
-                }).detach();
-
-                while (1) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    if (delays_ready_send) {
-                        delays_ready_send_mutex.lock();
-                        delays_ready_send = false;
-                        delays_ready_send_mutex.unlock();
-                        if (::send(sock, data_buf, sizeof(dsp_data), 0) < 0) {
-                            std::cout << "client disconnected" << std::endl;
-                            close(sock);
-                            break;
-                        } else {
-                            std::cout << "client send" << std::endl;
-                        }
-                    }
-                    getsockopt(sock, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-                    if (error_code) {
-                        std::cout << "client disconnected" << std::endl;
-                        close(sock);
-                        break;       
-                    }
-                }
-            }
-        }).detach();
-        return true;
-    }
-
-    bool load_config()
-    {
-        std::ifstream config_file("/home/config.json");
-        if (config_file.is_open()) {
-            json config;
-            config_file >> config;
-            hilbert_threshold = config.at("hilbert_threshold").get<double>();
-            send(AXI_XADC_SET_THRESHOLD, config.at("fft_threshold").get<int>());
-            send(AXI_XADC_SET_FREQUENCY, calc_fft_freq_comp(config.at("frequency").get<int>()));
-        } else {
-            std::cout << "failed to open config" << std::endl;
-            return false;
-        }
-        return true;
-    }
-
-    int ham_driver;
-    bool m_is_ready;
+    std::condition_variable cv_sig;
+    std::mutex mtx_sig;
     struct sigaction sig;
+
+    sig_atomic_t data_rcvd_flag = 0;
+    sig_atomic_t delays_ready = 0;
+    sig_atomic_t delays_ready_send = 0;
+    vector<char> data_rcvd;
+    float threshold = 0.14;
+
+    static union {
+        dsp_data data_out;
+        unsigned char data_buf[sizeof(dsp_data)];
+    };
+
+    int sock, listener;
+    struct sockaddr_in addr;
+
+    std::mutex json_mutex;
+    int block_size = 1024;
 };
 
-std::mutex json_mutex;
-Driver driver;
+int measure_time()
+{
+    using namespace std::chrono;
+    static const high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    duration<double, std::milli> time_span = t2 - t1;
+    return time_span.count();
+}
 
-std::mutex processing_mutex;
-
-std::vector<data_type> data;
-std::vector<fourier_type> fourier_result;
-std::vector<hilbert_type> hilbert_result;
-std::vector<data_type> delays;
-
-std::mutex data_ready_send_mutex;
-bool data_ready_send = false;
-int blocks_num;
-int block_size;
+std::vector<data_type> data(FIFO_SIZE);
+std::vector<fourier_type> fourier_result(FIFO_SIZE);
+std::vector<hilbert_type> hilbert_result(FIFO_SIZE);
+std::vector<data_type> delays(4);
 
 static void handle_signal(int n, siginfo_t *info, void *unused) 
 {
-    std::cout << "handle signal" << std::endl;
-    processing_mutex.lock();
-    blocks_num = driver.recv(0, data);
-    delays.resize(blocks_num);
-    block_size = data.size()/blocks_num;
-    process_ping_guilbert(data.data(), blocks_num, block_size, delays.data(), hilbert_threshold, hilbert_result, fourier_result);
-    data_ready_send = true;
-    processing_mutex.unlock();
-    for (int i = 0; i < blocks_num; ++i) {
-        data_out.arrival_time[i] = delays[i];
+    std::cout << "handle_signal" << std::endl;
+    data_rcvd_flag = 1;
+    std::unique_lock<std::mutex> lck(mtx_sig, std::defer_lock);
+    draw_data_ptr = reinterpret_cast<unsigned short *>(buffer);
+    while(!lck.try_lock()){;}
+    for (int i = 0; i < FIFO_SIZE / 2; i+=4) {
+        data[i / 4 + 0 * FIFO_SIZE / 8] = draw_data_ptr[i + 0];
+        data[i / 4 + 1 * FIFO_SIZE / 8] = draw_data_ptr[i + 1];
+        data[i / 4 + 2 * FIFO_SIZE / 8] = draw_data_ptr[i + 2];
+        data[i / 4 + 3 * FIFO_SIZE / 8] = draw_data_ptr[i + 3];
     }
-    delays_ready_send_mutex.lock();
-    delays_ready_send = true;
-    delays_ready_send_mutex.unlock();
-    driver.wait();
+    process_ping_guilbert(data.data(), 4, 1024, delays.data(), threshold, hilbert_result, fourier_result);
+    // processing_ping_guilbert(draw_data, 4, 1024, data_out.arrival_time, threshold);
+    delays_ready = 1;
+    delays_ready_send = 1;
+    timer(std::chrono::milliseconds(500), [](){ioctl(fd, AXI_XADC_REARM);});
+
+}
+
+static int init_drv()
+{
+    fd = open("/dev/channel0", O_RDONLY);
+    if(fd < 0) {
+        cerr << "captureThread :: dev open error" << endl;
+        return -1;  
+    }
+    
+    buffer = static_cast<unsigned char *>(mmap(0, FIFO_SIZE, PROT_READ, MAP_SHARED, fd, 0));
+
+    sig.sa_sigaction = handle_signal;
+    sig.sa_flags = SA_SIGINFO;
+    sigaction(SIG_DATA_READY, &sig, NULL);
+
+    if (ioctl(fd, AXI_XADC_SET_PID, getpid()) < 0) {
+        cerr << "HAM device failed IOCTL_SET_PID" << endl;
+        return -1;
+    }
+    ioctl(fd, AXI_XADC_SET_THRESHOLD, 2);
+    ioctl(fd, AXI_XADC_SET_FREQUENCY, 53);
+
+    listener = socket(AF_INET, SOCK_STREAM, 0);
+    if(listener < 0)
+    {
+        cerr << "failed to create socket" << endl;
+        return -1;
+    }
+
+    int reuse = 1;
+    setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(3425);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if(bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        cerr << "failed to bind socket" << endl;
+        return -1;
+    }
+
+    listen(listener, 1);
+
+    std::thread([](){
+        int error_code;
+        socklen_t error_code_size = sizeof(error_code);
+        while(1) {
+            sock = accept(listener, NULL, NULL);
+            if(sock < 0) {   
+                sleep(1);
+                break;
+            }
+            cout << "client connected" << endl;
+
+            std::thread([](){
+                while (1) {
+                    std::uint8_t command;
+                    if (::recv(sock, &command, sizeof(command), 0) > 0) {
+                        if (33 <= command && command <= 60) {
+                            std::cout <<  "client recv command " << (int)command << std::endl;
+                            ioctl(fd, AXI_XADC_SET_FREQUENCY, command);
+                        }
+                    }
+                }
+            }).detach();
+
+            while(1) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+                if(delays_ready_send) {
+                    delays_ready_send = 0;
+                    if(send(sock, data_buf, sizeof(dsp_data), 0) < 0) {
+                        cout << "client disconnected" << endl;
+                        close(sock);
+                        break;
+                    }
+                }
+                getsockopt(sock, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
+                if(error_code) {
+                    cout << "client disconnected" << endl;
+                    close(sock);
+                    break;       
+                }
+            }
+        }
+    }).detach();
+
+    ioctl(fd, AXI_XADC_DMA_START);
+    return 0;
+}
+
+int recv(int cmd) {
+    return ioctl(fd, cmd);
+}
+
+void send(int cmd) {
+    ioctl(fd, cmd);
+}
+
+void send(int cmd, unsigned long arg) {
+    ioctl(fd, cmd, arg);
 }
 
 class WebClientRequest: public Fastcgipp::Request<wchar_t>
@@ -339,7 +289,7 @@ private:
             {post_event_type, "eventType"},
         });
         if (post_event_type == StartDMA || post_event_type == StopDMA) {
-            driver.send(post_event_type == StartDMA ? AXI_XADC_DMA_START : AXI_XADC_DMA_STOP);
+            send(post_event_type == StartDMA ? AXI_XADC_DMA_START : AXI_XADC_DMA_STOP);
             return true;
         }
         if (post_event_type == SettingsGet) {
@@ -373,12 +323,12 @@ private:
         std::cerr << std::endl;
         if (post_event_type == SettingsSet) {
             if (mode == fpga_sim_mode || mode == real_mode) {
-                driver.send(AXI_XADC_SET_THRESHOLD, post_fft_threshold);
-                driver.send(AXI_XADC_SET_FREQUENCY, post_frequency);
+                send(AXI_XADC_SET_THRESHOLD, post_fft_threshold);
+                send(AXI_XADC_SET_FREQUENCY, post_frequency);
             }
-            processing_mutex.lock();
-            hilbert_threshold = post_hilbert_threshold;
-            processing_mutex.unlock();
+            mtx_sig.lock();
+            threshold = post_hilbert_threshold;
+            mtx_sig.unlock();
         }
         std::cerr << "inProcessor ended" << std::endl;
         return true;
@@ -386,6 +336,7 @@ private:
 
     bool response()
     {
+        std::unique_lock<std::mutex> lck(mtx_dev, std::defer_lock);
         using Fastcgipp::Encoding;
         out <<  L"Content-Type: text/html\n\n";
         if (post_event_type == SettingsSet) {
@@ -393,19 +344,15 @@ private:
         }
         if (post_event_type == SettingsGet) {
             out <<  L"{\"fftThreshold\": " << 
-                driver.recv(AXI_XADC_GET_THRESHOLD) << L", " <<
+                recv(AXI_XADC_GET_THRESHOLD) << L", " <<
                 L"\"frequency\": " << 
-                driver.recv(AXI_XADC_GET_FREQUENCY) << L"}";
+                recv(AXI_XADC_GET_FREQUENCY) << L"}";
             return true;
         }
-        if (driver.is_ready()) {
-            if (blocks_num == 0) {
-                out << "{\"ready\":0}";
-                return true;
-            }
-            if (data_ready_send) {
-                processing_mutex.lock();
-                data_ready_send = false;
+        if (data_rcvd_flag && delays_ready) {
+            if (lck.try_lock()) {
+                data_rcvd_flag = 0;
+                delays_ready = 0;
                 const int slice_beg = std::min(block_size, std::max(post_slice_beg, 0));
                 const int slice_end = std::max(slice_beg, std::min(post_slice_end, block_size));
 
@@ -430,8 +377,14 @@ private:
                     js_ary({fourier_0, fourier_1, fourier_2})
                 });
                 msg_bind();
-                processing_mutex.unlock();
             }
+        }
+        if (delays_ready) {
+            out << "{\"ready\":000}";
+        } else if (data_rcvd_flag) {
+            out << "{\"ready\":00}";
+        } else {
+            out << "{\"ready\":0}";
         }
         return true;
     }
@@ -505,15 +458,19 @@ private:
     }
 };
 
-int main(int argc, char** argv)
+Fastcgipp::Manager<WebClientRequest> manager;
+
+int main()
 {
-    if (!driver.init(DEVICE_NAME)) {
-        return 0;
-    }
-    Fastcgipp::Manager<WebClientRequest> manager;
+    init_drv();
+
     manager.setupSignals();
-    manager.listen("127.0.0.1", argc > 1 ? argv[1] : "1026");
+    manager.listen("127.0.0.1", "1026");
     manager.start();
     manager.join();
+
+    cout << "axi_xadc_app :: Data Capture Thread Terminated" << endl;
     return 0;
-}
+  }
+
+
